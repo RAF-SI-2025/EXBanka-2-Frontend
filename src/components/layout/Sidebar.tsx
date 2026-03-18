@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import {
   LayoutDashboard,
   Users,
@@ -11,110 +12,46 @@ import {
   ArrowLeftRight,
   UserCheck,
   ClipboardList,
+  ChevronDown,
+  ChevronRight,
+  Banknote,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
 
-interface NavItem {
-  label: string
-  to: string
-  icon: React.ReactNode
-  roles: string[]
-  /** If set, item is shown only when user has this permission (in addition to role). */
-  permission?: string
-}
-
-const NAV_ITEMS: NavItem[] = [
-  {
-    label: 'Kontrolna tabla',
-    to: '/admin',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    roles: ['ADMIN'],
-  },
-  {
-    label: 'Lista zaposlenih',
-    to: '/admin/employees',
-    icon: <Users className="h-5 w-5" />,
-    roles: ['ADMIN'],
-    permission: 'MANAGE_USERS',
-  },
-  {
-    label: 'Novi zaposleni',
-    to: '/admin/employees/new',
-    icon: <UserPlus className="h-5 w-5" />,
-    roles: ['ADMIN'],
-    permission: 'MANAGE_USERS',
-  },
-  {
-    label: 'Moj portal',
-    to: '/employee',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
-  },
-  {
-    label: 'Kreiraj korisnika',
-    to: '/employee/clients/new',
-    icon: <UserPlus className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
-  },
-  {
-    label: 'Kreiraj račun',
-    to: '/employee/accounts/new',
-    icon: <CreditCard className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
-  },
-  {
-    label: 'Klijentski portal',
-    to: '/client',
-    icon: <LayoutDashboard className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-  {
-    label: 'Računi',
-    to: '/client/accounts',
-    icon: <Wallet className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-  {
-    label: 'Novo plaćanje',
-    to: '/client/payments/new',
-    icon: <SendHorizontal className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-  {
-    label: 'Prenos',
-    to: '/client/payments/transfer',
-    icon: <ArrowLeftRight className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-  {
-    label: 'Primaoci',
-    to: '/client/payments/recipients',
-    icon: <UserCheck className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-  {
-    label: 'Pregled plaćanja',
-    to: '/client/payments/history',
-    icon: <ClipboardList className="h-5 w-5" />,
-    roles: ['CLIENT'],
-  },
-]
-
 export default function Sidebar() {
   const { user, clearAuth, hasPermission } = useAuthStore()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  const [paymentOpen, setPaymentOpen] = useState(
+    location.pathname.startsWith('/client/payments')
+  )
 
   const handleLogout = () => {
     clearAuth()
     navigate('/login', { replace: true })
   }
 
-  const visibleItems = NAV_ITEMS.filter((item) => {
-    if (!user?.userType || !item.roles.includes(user.userType)) return false
-    if (item.permission && !hasPermission(item.permission)) return false
-    return true
-  })
+  const isClient = user?.userType === 'CLIENT'
+  const isAdmin = user?.userType === 'ADMIN'
+  const isEmployee = user?.userType === 'EMPLOYEE'
+
+  const navLinkClass = ({ isActive }: { isActive: boolean }) =>
+    [
+      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+      isActive
+        ? 'bg-primary-700 text-white'
+        : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+    ].join(' ')
+
+  const subNavLinkClass = ({ isActive }: { isActive: boolean }) =>
+    [
+      'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ml-4',
+      isActive
+        ? 'bg-primary-700 text-white'
+        : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+    ].join(' ')
 
   return (
     <aside className="flex h-screen w-64 flex-col bg-primary-900 text-white">
@@ -137,24 +74,99 @@ export default function Sidebar() {
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-        {visibleItems.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.to === '/admin' || item.to === '/employee' || item.to === '/client'}
-            className={({ isActive }) =>
-              [
-                'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary-700 text-white'
-                  : 'text-primary-300 hover:bg-primary-800 hover:text-white',
-              ].join(' ')
-            }
-          >
-            {item.icon}
-            {item.label}
-          </NavLink>
-        ))}
+        {/* ADMIN items */}
+        {isAdmin && (
+          <>
+            <NavLink to="/admin" end className={navLinkClass}>
+              <LayoutDashboard className="h-5 w-5" />
+              Kontrolna tabla
+            </NavLink>
+            {hasPermission('MANAGE_USERS') && (
+              <>
+                <NavLink to="/admin/employees" className={navLinkClass}>
+                  <Users className="h-5 w-5" />
+                  Lista zaposlenih
+                </NavLink>
+                <NavLink to="/admin/employees/new" className={navLinkClass}>
+                  <UserPlus className="h-5 w-5" />
+                  Novi zaposleni
+                </NavLink>
+              </>
+            )}
+          </>
+        )}
+
+        {/* EMPLOYEE items */}
+        {isEmployee && (
+          <>
+            <NavLink to="/employee" end className={navLinkClass}>
+              <LayoutDashboard className="h-5 w-5" />
+              Moj portal
+            </NavLink>
+            <NavLink to="/employee/clients/new" className={navLinkClass}>
+              <UserPlus className="h-5 w-5" />
+              Kreiraj korisnika
+            </NavLink>
+            <NavLink to="/employee/accounts/new" className={navLinkClass}>
+              <CreditCard className="h-5 w-5" />
+              Kreiraj račun
+            </NavLink>
+          </>
+        )}
+
+        {/* CLIENT items */}
+        {isClient && (
+          <>
+            <NavLink to="/client" end className={navLinkClass}>
+              <LayoutDashboard className="h-5 w-5" />
+              Klijentski portal
+            </NavLink>
+            <NavLink to="/client/accounts" className={navLinkClass}>
+              <Wallet className="h-5 w-5" />
+              Računi
+            </NavLink>
+
+            {/* Plaćanja collapsible group */}
+            <div>
+              <button
+                onClick={() => setPaymentOpen((v) => !v)}
+                className={[
+                  'flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  location.pathname.startsWith('/client/payments')
+                    ? 'bg-primary-700 text-white'
+                    : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+                ].join(' ')}
+              >
+                <Banknote className="h-5 w-5" />
+                <span className="flex-1 text-left">Plaćanja</span>
+                {paymentOpen
+                  ? <ChevronDown className="h-4 w-4" />
+                  : <ChevronRight className="h-4 w-4" />}
+              </button>
+
+              {paymentOpen && (
+                <div className="mt-1 space-y-1">
+                  <NavLink to="/client/payments/new" className={subNavLinkClass}>
+                    <SendHorizontal className="h-4 w-4" />
+                    Novo plaćanje
+                  </NavLink>
+                  <NavLink to="/client/payments/transfer" className={subNavLinkClass}>
+                    <ArrowLeftRight className="h-4 w-4" />
+                    Prenos
+                  </NavLink>
+                  <NavLink to="/client/payments/recipients" className={subNavLinkClass}>
+                    <UserCheck className="h-4 w-4" />
+                    Primaoci plaćanja
+                  </NavLink>
+                  <NavLink to="/client/payments/history" className={subNavLinkClass}>
+                    <ClipboardList className="h-4 w-4" />
+                    Pregled plaćanja
+                  </NavLink>
+                </div>
+              )}
+            </div>
+          </>
+        )}
       </nav>
 
       {/* Logout */}
