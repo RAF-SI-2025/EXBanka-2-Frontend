@@ -26,6 +26,14 @@ import NovoPlacanjeWizard from '@/pages/client/payments/NovoPlacanjeWizard'
 import PrenosPage from '@/pages/client/payments/PrenosPage'
 import PregledPlacanja from '@/pages/client/payments/PregledPlacanja'
 
+// Client – Krediti
+import KreditiPage from '@/pages/client/krediti/KreditiPage'
+import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
+
+// Employee – Krediti
+import ZahteviZaKreditPage from '@/pages/employee/krediti/ZahteviZaKreditPage'
+import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
+
 import NotFoundPage from '@/pages/NotFoundPage'
 
 const router = createBrowserRouter(
@@ -53,6 +61,8 @@ const router = createBrowserRouter(
             <Route index element={<EmployeePage />} />
             <Route path="clients/new" element={<CreateClient />} />
             <Route path="accounts/new" element={<CreateAccount />} />
+            <Route path="krediti/zahtevi" element={<ZahteviZaKreditPage />} />
+            <Route path="krediti/svi" element={<SviKreditiPage />} />
           </Route>
 
           {/* Client home */}
@@ -64,6 +74,8 @@ const router = createBrowserRouter(
             <Route path="payments/transfer" element={<PrenosPage />} />
             <Route path="payments/recipients" element={<PrimaociPage />} />
             <Route path="payments/history" element={<PregledPlacanja />} />
+            <Route path="krediti" element={<KreditiPage />} />
+            <Route path="krediti/novo" element={<KreditZahtevForm />} />
           </Route>
         </Route>
       </Route>

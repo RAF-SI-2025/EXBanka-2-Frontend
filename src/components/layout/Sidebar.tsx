@@ -11,6 +11,8 @@ import {
   ArrowLeftRight,
   UserCheck,
   ClipboardList,
+  Landmark,
+  FileText,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useNavigate } from 'react-router-dom'
@@ -64,6 +66,18 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE'],
   },
   {
+    label: 'Zahtevi za kredit',
+    to: '/employee/krediti/zahtevi',
+    icon: <FileText className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
+    label: 'Svi krediti',
+    to: '/employee/krediti/svi',
+    icon: <Landmark className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
     label: 'Klijentski portal',
     to: '/client',
     icon: <LayoutDashboard className="h-5 w-5" />,
@@ -97,6 +111,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Pregled plaćanja',
     to: '/client/payments/history',
     icon: <ClipboardList className="h-5 w-5" />,
+    roles: ['CLIENT'],
+  },
+  {
+    label: 'Krediti',
+    to: '/client/krediti',
+    icon: <Landmark className="h-5 w-5" />,
     roles: ['CLIENT'],
   },
 ]
