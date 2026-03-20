@@ -210,7 +210,7 @@ export default function KreditZahtevForm() {
             </p>
           </div>
           <div className="flex gap-3 flex-wrap justify-center">
-            <Button variant="secondary" onClick={() => navigate('/client/krediti')}>
+            <Button variant="secondary" onClick={() => navigate('/client/credits')}>
               Moji krediti
             </Button>
             <Button variant="primary" onClick={() => { setSuccess(false) }}>
@@ -228,7 +228,7 @@ export default function KreditZahtevForm() {
       {/* Back */}
       <button
         type="button"
-        onClick={() => navigate('/client/krediti')}
+        onClick={() => navigate('/client/credits')}
         className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 transition-colors"
       >
         <ArrowLeft className="h-4 w-4" /> Nazad na kredite
@@ -469,7 +469,7 @@ export default function KreditZahtevForm() {
           <Button
             type="button"
             variant="secondary"
-            onClick={() => navigate('/client/krediti')}
+            onClick={() => navigate('/client/credits')}
           >
             Otkaži
           </Button>

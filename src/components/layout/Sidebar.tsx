@@ -76,13 +76,13 @@ const NAV_ITEMS: NavItem[] = [
   },
   {
     label: 'Zahtevi za kredit',
-    to: '/employee/krediti/zahtevi',
+    to: '/employee/credits/requests',
     icon: <FileText className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
   {
     label: 'Svi krediti',
-    to: '/employee/krediti/svi',
+    to: '/employee/credits/all',
     icon: <Landmark className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
@@ -93,7 +93,7 @@ const NAV_ITEMS: NavItem[] = [
   // NOTE: Plaćanja is rendered as a collapsible submenu below — not here
   { label: 'Menjačnica', to: '/client/exchange',  roles: ['CLIENT'] },
   { label: 'Kartice',    to: '/client/cards',     roles: ['CLIENT'] },
-  { label: 'Krediti',    to: '/client/krediti',     roles: ['CLIENT'] },
+  { label: 'Krediti',    to: '/client/credits',     roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [

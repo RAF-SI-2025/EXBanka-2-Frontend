@@ -68,8 +68,8 @@ const router = createBrowserRouter(
             <Route path="clients/:id/edit" element={<EditClient />} />
             <Route path="clients/new" element={<CreateClient />} />
             <Route path="accounts/new" element={<CreateAccount />} />
-            <Route path="krediti/zahtevi" element={<ZahteviZaKreditPage />} />
-            <Route path="krediti/svi" element={<SviKreditiPage />} />
+            <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
+            <Route path="credits/all" element={<SviKreditiPage />} />
           </Route>
 
           {/* Client home */}
@@ -81,8 +81,8 @@ const router = createBrowserRouter(
             <Route path="payments/transfer" element={<PrenosPage />} />
             <Route path="payments/recipients" element={<PrimaociPage />} />
             <Route path="payments/history" element={<PregledPlacanja />} />
-            <Route path="krediti" element={<KreditiPage />} />
-            <Route path="krediti/novo" element={<KreditZahtevForm />} />
+            <Route path="credits" element={<KreditiPage />} />
+            <Route path="credits/new" element={<KreditZahtevForm />} />
             <Route path="exchange" element={<MenjacnicaPage />} />
           </Route>
         </Route>
