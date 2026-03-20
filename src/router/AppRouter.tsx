@@ -55,8 +55,8 @@ export default function AppRouter() {
             element={<PrivateRoute requiredRole="EMPLOYEE" />}
           >
             <Route index element={<EmployeePage />} />
-            <Route path="krediti/zahtevi" element={<ZahteviZaKreditPage />} />
-            <Route path="krediti/svi" element={<SviKreditiPage />} />
+            <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
+            <Route path="credits/all" element={<SviKreditiPage />} />
           </Route>
 
           {/* Client home */}
@@ -65,8 +65,8 @@ export default function AppRouter() {
             element={<PrivateRoute requiredRole="CLIENT" />}
           >
             <Route index element={<ClientPage />} />
-            <Route path="krediti" element={<KreditiPage />} />
-            <Route path="krediti/novo" element={<KreditZahtevForm />} />
+            <Route path="credits" element={<KreditiPage />} />
+            <Route path="credits/new" element={<KreditZahtevForm />} />
           </Route>
         </Route>
       </Route>

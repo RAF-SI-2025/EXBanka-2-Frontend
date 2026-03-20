@@ -63,7 +63,7 @@ export default function KreditiPage() {
         <Button
           variant="primary"
           leftIcon={<PlusCircle className="h-4 w-4" />}
-          onClick={() => navigate('/client/krediti/novo')}
+          onClick={() => navigate('/client/credits/new')}
         >
           Zahtev za kredit
         </Button>
@@ -92,7 +92,7 @@ export default function KreditiPage() {
             variant="primary"
             size="lg"
             leftIcon={<PlusCircle className="h-5 w-5" />}
-            onClick={() => navigate('/client/krediti/novo')}
+            onClick={() => navigate('/client/credits/new')}
             data-cy="empty-state-cta"
           >
             Podnesi zahtev za kredit
