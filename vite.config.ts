@@ -23,6 +23,11 @@ export default defineConfig({
         target: 'http://localhost:8083',
         changeOrigin: true,
       },
+      // kartice klijenta — /api/cards → 8083/api/cards (path kept intact)
+      '/api/cards': {
+        target: 'http://localhost:8083',
+        changeOrigin: true,
+      },
       // user-service fallback — /api → 8082
       '/api': {
         target: 'http://localhost:8082',

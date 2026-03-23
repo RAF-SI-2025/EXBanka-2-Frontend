@@ -237,6 +237,7 @@ export interface CreateAccountRequest {
   naziv_racuna:    string
   pocetno_stanje:  number
   napravi_karticu: boolean
+  tip_kartice?:    string   // "VISA" | "MASTERCARD" | "DINACARD" | "AMEX"
   firma?:          CreateAccountFirmaRequest
 }
 
@@ -285,6 +286,18 @@ export interface Transakcija {
   opis: string
   vreme_izvrsavanja: string   // ISO 8601
   status: string              // "IZVRSEN" | "CEKANJE" | "STORNIRAN"
+}
+
+export interface KarticaKlijenta {
+  id: string
+  broj_kartice: string
+  tip_kartice: string       // "VISA" | "MASTERCARD" | "DINACARD" | "AMEX"
+  vrsta_kartice: string     // "DEBIT" | "CREDIT"
+  datum_isteka: string      // ISO 8601
+  status: string            // "AKTIVNA" | "BLOKIRANA" | "DEAKTIVIRANA"
+  racun_id: string
+  naziv_racuna: string
+  broj_racuna: string
 }
 
 export interface MyProfile {

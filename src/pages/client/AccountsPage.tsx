@@ -1,8 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CreditCard, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react'
+import { CreditCard, ArrowUpDown, ChevronDown, ChevronUp, PlusCircle } from 'lucide-react'
 import { getClientAccounts, getAccountTransactions } from '@/services/bankaService'
 import type { AccountListItem, Transakcija } from '@/types'
+import KarticaWizardModal from './KarticaWizardModal'
 
 type SortBy = 'date' | 'type'
 type SortOrder = 'asc' | 'desc'
@@ -54,6 +55,8 @@ export default function AccountsPage() {
 
   const [sortBy, setSortBy] = useState<SortBy>('date')
   const [sortOrder, setSortOrder] = useState<SortOrder>('desc')
+
+  const [wizardOpen, setWizardOpen] = useState(false)
 
   useEffect(() => {
     setLoadingAccounts(true)
@@ -164,9 +167,18 @@ export default function AccountsPage() {
               <>
                 {/* Account summary */}
                 <div className="card">
-                  <div className="mb-4">
-                    <h2 className="text-lg font-bold text-gray-900">{selectedAccount.naziv_racuna}</h2>
-                    <p className="text-sm text-gray-500">{selectedAccount.broj_racuna}</p>
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <h2 className="text-lg font-bold text-gray-900">{selectedAccount.naziv_racuna}</h2>
+                      <p className="text-sm text-gray-500">{selectedAccount.broj_racuna}</p>
+                    </div>
+                    <button
+                      onClick={() => setWizardOpen(true)}
+                      className="flex items-center gap-1.5 text-xs font-medium text-primary-700 hover:text-primary-900 border border-primary-200 hover:border-primary-400 bg-primary-50 hover:bg-primary-100 rounded-lg px-3 py-1.5 transition-colors shrink-0"
+                    >
+                      <PlusCircle className="h-3.5 w-3.5" />
+                      Zatraži karticu
+                    </button>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -268,6 +280,16 @@ export default function AccountsPage() {
             )}
           </div>
         </div>
+      )}
+
+      {selectedAccount && (
+        <KarticaWizardModal
+          open={wizardOpen}
+          onClose={() => setWizardOpen(false)}
+          racunId={selectedAccount.id}
+          vrstaRacuna={selectedAccount.vrsta_racuna}
+          nazivRacuna={selectedAccount.naziv_racuna}
+        />
       )}
     </div>
   )
