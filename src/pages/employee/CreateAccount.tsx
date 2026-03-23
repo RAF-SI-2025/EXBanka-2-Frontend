@@ -19,6 +19,18 @@ import type { ClientPreview } from '@/types'
 
 // ─── Validation schema ────────────────────────────────────────────────────────
 
+const TIPOVI_KARTICE = [
+  { value: 'VISA',       label: 'Visa' },
+  { value: 'MASTERCARD', label: 'Mastercard' },
+  { value: 'DINACARD',   label: 'DinaCard' },
+  { value: 'AMEX',       label: 'American Express' },
+] as const
+
+const KARTICE_LIMITI = {
+  LICNI:    'Lični račun: max 2 kartice',
+  POSLOVNI: 'Poslovni račun: max 1 kartica po osobi',
+} as const
+
 const schema = z
   .object({
     kategorija:          z.enum(['TEKUCI', 'DEVIZNI']),
@@ -28,13 +40,20 @@ const schema = z
     podvrsta:            z.string().optional(),
     pocetno_stanje:      z.coerce.number().min(0, 'Početno stanje ne može biti negativno'),
     napravi_karticu:     z.boolean(),
+    tip_kartice:         z.string().optional(),
     naziv_firme:         z.string().optional(),
     maticni_broj:        z.string().optional(),
     pib:                 z.string().optional(),
     adresa_firme:        z.string().optional(),
     sifra_delatnosti_id: z.string().optional(),
   })
-  .superRefine((d: { tip: string; naziv_firme?: string; maticni_broj?: string; pib?: string; adresa_firme?: string; sifra_delatnosti_id?: string }, ctx: z.RefinementCtx) => {
+  .superRefine((d, ctx) => {
+    if (d.kategorija === 'TEKUCI' && !d.podvrsta) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Obavezno polje', path: ['podvrsta'] })
+    }
+    if (d.napravi_karticu && !d.tip_kartice) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Odaberite tip kartice', path: ['tip_kartice'] })
+    }
     if (d.tip === 'POSLOVNI') {
       if (!d.naziv_firme)         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Obavezno polje', path: ['naziv_firme'] })
       if (!d.maticni_broj)        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Obavezno polje', path: ['maticni_broj'] })
@@ -99,15 +118,18 @@ export default function CreateAccount() {
     },
   })
 
-  const kategorija = watch('kategorija')
-  const tip        = watch('tip')
+  const kategorija     = watch('kategorija')
+  const tip            = watch('tip')
+  const napraviKarticu = watch('napravi_karticu')
 
-  // Auto-set valuta_id to RSD when TEKUCI; clear when switching to DEVIZNI
+  // Auto-set valuta_id to RSD when TEKUCI; clear when switching to DEVIZNI.
+  // Takođe resetuj DinaCard izbor ako korisnik prebaci na devizni račun.
   useEffect(() => {
     if (kategorija === 'TEKUCI' && rsdCurrency) {
       setValue('valuta_id', rsdCurrency.id)
     } else if (kategorija === 'DEVIZNI') {
       setValue('valuta_id', '')
+      setValue('tip_kartice', '') // DinaCard nije dozvoljen na deviznom računu
     }
   }, [kategorija, rsdCurrency, setValue])
 
@@ -146,6 +168,7 @@ export default function CreateAccount() {
         podvrsta:        values.podvrsta ? (PODVRSTA_MAP[values.podvrsta] ?? values.podvrsta) : undefined,
         pocetno_stanje:  values.pocetno_stanje,
         napravi_karticu: values.napravi_karticu,
+        tip_kartice:     values.napravi_karticu ? values.tip_kartice : undefined,
         ...(showFirma && {
           firma: {
             naziv:               values.naziv_firme ?? '',
@@ -158,7 +181,21 @@ export default function CreateAccount() {
       })
 
       toast.success('Račun uspješno kreiran.')
-      reset()
+      reset({
+        kategorija:          'TEKUCI',
+        tip:                 'LICNI',
+        valuta_id:           rsdCurrency?.id ?? '',
+        naziv_racuna:        '',
+        podvrsta:            '',
+        pocetno_stanje:      0,
+        napravi_karticu:     false,
+        tip_kartice:         '',
+        naziv_firme:         '',
+        maticni_broj:        '',
+        pib:                 '',
+        adresa_firme:        '',
+        sifra_delatnosti_id: '',
+      })
       setVlasnik(null)
     } catch (err) {
       const e = err as Error
@@ -288,7 +325,7 @@ export default function CreateAccount() {
             {/* Podvrsta */}
             {showPodvrsta && (
               <div>
-                <label className="form-label">Podvrsta</label>
+                <label className="form-label">Podvrsta <span className="ml-0.5 text-red-500">*</span></label>
                 <select
                   className={`input-base ${errors.podvrsta ? 'input-error' : ''}`}
                   {...register('podvrsta')}
@@ -333,7 +370,7 @@ export default function CreateAccount() {
                 {...register('adresa_firme')}
               />
               <div className="sm:col-span-2">
-                <label className="form-label">Šifra delatnosti</label>
+                <label className="form-label">Šifra delatnosti <span className="ml-0.5 text-red-500">*</span></label>
                 <select
                   className={`input-base ${errors.sifra_delatnosti_id ? 'input-error' : ''}`}
                   {...register('sifra_delatnosti_id')}
@@ -381,6 +418,36 @@ export default function CreateAccount() {
                 Napravi karticu
               </label>
             </div>
+
+            {/* Tip kartice — vidljivo samo kada je checkbox označen */}
+            {napraviKarticu && (
+              <div>
+                <label className="form-label">
+                  Tip kartice <span className="ml-0.5 text-red-500">*</span>
+                </label>
+                <select
+                  className={`input-base ${errors.tip_kartice ? 'input-error' : ''}`}
+                  {...register('tip_kartice')}
+                >
+                  <option value="">-- Odaberite tip --</option>
+                  {TIPOVI_KARTICE.map((t) => {
+                    const isDinaCardDisabled = t.value === 'DINACARD' && kategorija === 'DEVIZNI'
+                    return (
+                      <option key={t.value} value={t.value} disabled={isDinaCardDisabled}>
+                        {t.label}{isDinaCardDisabled ? ' (samo za RSD račune)' : ''}
+                      </option>
+                    )
+                  })}
+                </select>
+                {errors.tip_kartice && (
+                  <p role="alert" className="mt-1 text-xs text-red-600">{errors.tip_kartice.message}</p>
+                )}
+                {/* Info o limitu kartica */}
+                <p className="mt-1 text-xs text-gray-500">
+                  {KARTICE_LIMITI[tip as keyof typeof KARTICE_LIMITI]}
+                </p>
+              </div>
+            )}
           </div>
         </div>
 

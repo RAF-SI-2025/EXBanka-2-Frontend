@@ -8,6 +8,7 @@ import type {
   AccountListItem,
   AccountDetail,
   Transakcija,
+  KarticaKlijenta,
 } from '@/types'
 
 // ─── Backend response shapes (gRPC-Gateway camelCase) ─────────────────────────
@@ -101,6 +102,7 @@ export async function createAccount(req: CreateAccountRequest): Promise<{ id: st
     naziv:            req.naziv_racuna,
     stanje:           req.pocetno_stanje,
     kreirajKarticu:   req.napravi_karticu,
+    tipKartice:       req.tip_kartice ?? '',
     ...(req.firma && {
       firma: {
         naziv:       req.firma.naziv,
@@ -325,4 +327,75 @@ export async function verifyLimitChange(actionId: string, code: string): Promise
     `/bank/client/pending-actions/${actionId}/verify`,
     { code }
   )
+}
+
+// ─── Kartice klijenta ─────────────────────────────────────────────────────────
+
+interface BackendKarticaKlijenta {
+  id: string | number
+  brojKartice: string
+  tipKartice: string
+  vrstaKartice: string
+  datumIsteka: string
+  status: string
+  racunId: string | number
+  nazivRacuna: string
+  brojRacuna: string
+}
+
+/** Vraća sve kartice ulogovanog klijenta sa osnovnim podacima o računu. */
+export async function getMojeKartice(): Promise<KarticaKlijenta[]> {
+  const res = await apiGet<{ kartice: BackendKarticaKlijenta[] | null }>('/bank/cards/my')
+  return (res.kartice ?? []).map((k) => ({
+    id:           String(k.id),
+    broj_kartice: k.brojKartice,
+    tip_kartice:  k.tipKartice,
+    vrsta_kartice: k.vrstaKartice,
+    datum_isteka: k.datumIsteka,
+    status:       k.status,
+    racun_id:     String(k.racunId),
+    naziv_racuna: k.nazivRacuna,
+    broj_racuna:  k.brojRacuna,
+  }))
+}
+
+/** Blokira karticu sa datim ID-om. Kartica mora biti AKTIVNA i vlasnik mora biti ulogovani korisnik. */
+export async function blokirajKarticu(id: string): Promise<void> {
+  await apiPatch<Record<string, never>, unknown>(`/bank/cards/${id}/block`, {})
+}
+
+// ─── Flow 2 — Klijent traži novu karticu ──────────────────────────────────────
+
+interface ZahtevZaKarticuRequest {
+  account_id: number
+  tip_kartice: string
+  authorized_person?: {
+    ime: string
+    prezime: string
+    datum_rodjenja: number  // Unix timestamp (sekunde)
+    pol: string
+    email: string
+    broj_telefona: string
+    adresa: string
+  }
+}
+
+/**
+ * Korak 1 — inicira zahtev za karticu. Backend proverava limite i šalje OTP na email.
+ * tip_kartice: "VISA" | "MASTERCARD" | "DINACARD" | "AMEX"
+ */
+export async function posaljiZahtevZaKarticu(req: ZahtevZaKarticuRequest): Promise<void> {
+  await apiPost<ZahtevZaKarticuRequest, unknown>('/bank/cards/request', req)
+}
+
+/**
+ * Korak 2 — verifikuje OTP i kreira karticu u bazi.
+ * Vraća ID novokreirane kartice.
+ */
+export async function potvrdiKreiranjeKartice(otpCode: string): Promise<{ karticaId: string }> {
+  const res = await apiPost<{ otp_code: string }, { kartica_id: number | string }>(
+    '/bank/cards/confirm',
+    { otp_code: otpCode }
+  )
+  return { karticaId: String(res.kartica_id) }
 }

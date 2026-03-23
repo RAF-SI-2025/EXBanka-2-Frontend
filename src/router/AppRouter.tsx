@@ -17,6 +17,9 @@ import CreateEmployee from '@/pages/admin/CreateEmployee'
 import EmployeePage from '@/pages/employee/EmployeePage'
 import ClientPage from '@/pages/client/ClientPage'
 
+// Client – Kartice
+import KarticeListaPage from '@/pages/client/KarticeListaPage'
+
 // Client – Krediti
 import KreditiPage from '@/pages/client/krediti/KreditiPage'
 import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
@@ -65,6 +68,7 @@ export default function AppRouter() {
             element={<PrivateRoute requiredRole="CLIENT" />}
           >
             <Route index element={<ClientPage />} />
+            <Route path="cards" element={<KarticeListaPage />} />
             <Route path="credits" element={<KreditiPage />} />
             <Route path="credits/new" element={<KreditZahtevForm />} />
           </Route>

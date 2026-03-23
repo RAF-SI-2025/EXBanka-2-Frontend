@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, type ChangeEvent, type KeyboardEvent } from 'react'
+import React, { useState, useRef, useCallback, useEffect, type ChangeEvent, type KeyboardEvent } from 'react'
 import { UserPlus, Search, X } from 'lucide-react'
 
 import { searchClients } from '@/services/bankaService'
@@ -37,6 +37,14 @@ export default function UserSelect({
   const [loading,    setLoading]    = useState(false)
   const [isOpen,     setIsOpen]     = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
+
+  // Sync uncontrolled input when value is cleared externally (e.g. after form reset)
+  useEffect(() => {
+    if (!value && inputRef.current) {
+      inputRef.current.value = ''
+      setSearchTerm('')
+    }
+  }, [value])
 
   // ── Core fetch ───────────────────────────────────────────────────────────────
 

@@ -30,6 +30,9 @@ import PrenosPage from '@/pages/client/payments/PrenosPage'
 import PregledPlacanja from '@/pages/client/payments/PregledPlacanja'
 import MenjacnicaPage from '@/pages/client/MenjacnicaPage'
 
+// Client – Kartice
+import KarticeListaPage from '@/pages/client/KarticeListaPage'
+
 // Client – Krediti
 import KreditiPage from '@/pages/client/krediti/KreditiPage'
 import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
@@ -81,6 +84,7 @@ const router = createBrowserRouter(
             <Route path="payments/transfer" element={<PrenosPage />} />
             <Route path="payments/recipients" element={<PrimaociPage />} />
             <Route path="payments/history" element={<PregledPlacanja />} />
+            <Route path="cards" element={<KarticeListaPage />} />
             <Route path="credits" element={<KreditiPage />} />
             <Route path="credits/new" element={<KreditZahtevForm />} />
             <Route path="exchange" element={<MenjacnicaPage />} />
