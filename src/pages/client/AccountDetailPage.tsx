@@ -287,7 +287,7 @@ export default function AccountDetailPage() {
             <Pencil className="h-4 w-4" /> Promena naziva računa
           </button>
           <button
-            onClick={() => navigate('/client/payment/new')}
+            onClick={() => navigate('/client/payments/new')}
             className="btn btn-primary text-sm"
           >
             Novo plaćanje

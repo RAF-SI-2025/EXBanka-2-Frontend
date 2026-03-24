@@ -43,7 +43,8 @@ function StatusBadge({ status }: { status: string }) {
   }
 }
 
-function tipLabel(tip: string): string {
+function tipLabel(tip: string, svrha?: string): string {
+  if (svrha?.startsWith('Konverzija')) return 'Konverzija valuta'
   return tip === 'PRENOS' ? 'Interni prenos' : 'Plaćanje'
 }
 
@@ -202,7 +203,7 @@ export default function PregledPlacanja() {
             >
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-xs text-gray-400">{tipLabel(p.tip_transakcije)}</span>
+                  <span className="text-xs text-gray-400">{tipLabel(p.tip_transakcije, p.svrha_placanja)}</span>
                   <StatusBadge status={p.status} />
                 </div>
                 <p className="text-sm font-semibold text-gray-900 mt-1 truncate">{p.naziv_primaoca}</p>
@@ -233,7 +234,7 @@ export default function PregledPlacanja() {
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <StatusBadge status={detail.status} />
-              <span className="text-xs text-gray-400">{tipLabel(detail.tip_transakcije)}</span>
+              <span className="text-xs text-gray-400">{tipLabel(detail.tip_transakcije, detail.svrha_placanja)}</span>
             </div>
 
             <div>
