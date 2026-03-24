@@ -9,6 +9,8 @@ import type {
   AccountDetail,
   Transakcija,
   KarticaKlijenta,
+  EmployeeAccountListItem,
+  EmployeeKarticaListItem,
 } from '@/types'
 
 // ─── Backend response shapes (gRPC-Gateway camelCase) ─────────────────────────
@@ -398,4 +400,70 @@ export async function potvrdiKreiranjeKartice(otpCode: string): Promise<{ kartic
     { otp_code: otpCode }
   )
   return { karticaId: String(res.kartica_id) }
+}
+
+// ─── Employee — Upravljanje računima i karticama ───────────────────────────────
+
+interface BackendEmployeeAccountListItem {
+  id: string | number
+  brojRacuna: string
+  vrstaRacuna: string
+  kategorijaRacuna: string
+  vlasnikId: string | number
+  imeVlasnika: string
+  prezimeVlasnika: string
+}
+
+interface BackendEmployeeKarticaListItem {
+  id: string | number
+  brojKartice: string
+  status: string
+  imeVlasnika: string
+  prezimeVlasnika: string
+  emailVlasnika: string
+}
+
+export async function getAllAccounts(params?: {
+  account_number?: string
+  first_name?: string
+  last_name?: string
+}): Promise<EmployeeAccountListItem[]> {
+  const res = await apiGet<{ accounts: BackendEmployeeAccountListItem[] | null }>(
+    '/bank/employee/accounts',
+    {
+      account_number: params?.account_number || undefined,
+      first_name:     params?.first_name || undefined,
+      last_name:      params?.last_name || undefined,
+    }
+  )
+  return (res.accounts ?? []).map((a) => ({
+    id:                String(a.id),
+    broj_racuna:       a.brojRacuna,
+    vrsta_racuna:      a.vrstaRacuna,
+    kategorija_racuna: a.kategorijaRacuna,
+    vlasnik_id:        String(a.vlasnikId),
+    ime_vlasnika:      a.imeVlasnika,
+    prezime_vlasnika:  a.prezimeVlasnika,
+  }))
+}
+
+export async function getAccountCards(brojRacuna: string): Promise<EmployeeKarticaListItem[]> {
+  const res = await apiGet<{ kartice: BackendEmployeeKarticaListItem[] | null }>(
+    `/bank/employee/accounts/${encodeURIComponent(brojRacuna)}/cards`
+  )
+  return (res.kartice ?? []).map((k) => ({
+    id:               String(k.id),
+    broj_kartice:     k.brojKartice,
+    status:           k.status,
+    ime_vlasnika:     k.imeVlasnika,
+    prezime_vlasnika: k.prezimeVlasnika,
+    email_vlasnika:   k.emailVlasnika,
+  }))
+}
+
+export async function changeCardStatus(cardNumber: string, status: string): Promise<void> {
+  await apiPatch<{ status: string }, unknown>(
+    `/bank/employee/cards/${encodeURIComponent(cardNumber)}/status`,
+    { status }
+  )
 }

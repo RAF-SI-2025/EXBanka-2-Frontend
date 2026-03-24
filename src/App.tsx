@@ -37,6 +37,10 @@ import KarticeListaPage from '@/pages/client/KarticeListaPage'
 import KreditiPage from '@/pages/client/krediti/KreditiPage'
 import KreditZahtevForm from '@/pages/client/krediti/KreditZahtevForm'
 
+// Employee – Računi i kartice
+import AccountsListPage from '@/pages/employee/AccountsListPage'
+import AccountCardsPage from '@/pages/employee/AccountCardsPage'
+
 // Employee – Krediti
 import ZahteviZaKreditPage from '@/pages/employee/krediti/ZahteviZaKreditPage'
 import SviKreditiPage from '@/pages/employee/krediti/SviKreditiPage'
@@ -71,6 +75,8 @@ const router = createBrowserRouter(
             <Route path="clients/:id/edit" element={<EditClient />} />
             <Route path="clients/new" element={<CreateClient />} />
             <Route path="accounts/new" element={<CreateAccount />} />
+            <Route path="accounts" element={<AccountsListPage />} />
+            <Route path="accounts/:broj_racuna/cards" element={<AccountCardsPage />} />
             <Route path="credits/requests" element={<ZahteviZaKreditPage />} />
             <Route path="credits/all" element={<SviKreditiPage />} />
           </Route>

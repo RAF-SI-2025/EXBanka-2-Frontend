@@ -69,6 +69,12 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE'],
   },
   {
+    label: 'Svi računi',
+    to: '/employee/accounts',
+    icon: <Building2 className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
+  {
     label: 'Kreiraj račun',
     to: '/employee/accounts/new',
     icon: <CreditCard className="h-5 w-5" />,

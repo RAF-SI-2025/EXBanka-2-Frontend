@@ -307,6 +307,27 @@ export interface MyProfile {
   last_name: string
 }
 
+// ─── Employee account/card management types ───────────────────────────────────
+
+export interface EmployeeAccountListItem {
+  id: string
+  broj_racuna: string
+  vrsta_racuna: string       // "LICNI" | "POSLOVNI"
+  kategorija_racuna: string  // "TEKUCI" | "DEVIZNI"
+  vlasnik_id: string
+  ime_vlasnika: string
+  prezime_vlasnika: string
+}
+
+export interface EmployeeKarticaListItem {
+  id: string
+  broj_kartice: string
+  status: string             // "AKTIVNA" | "BLOKIRANA" | "DEAKTIVIRANA"
+  ime_vlasnika: string
+  prezime_vlasnika: string
+  email_vlasnika: string
+}
+
 // ─── Payment module types ─────────────────────────────────────────────────────
 
 export interface PaymentRecipient {
