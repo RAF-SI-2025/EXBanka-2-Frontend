@@ -247,7 +247,7 @@ describe('Krediti — Klijentski portal', () => {
     it('rok otplate ima opcije 12–84 za GOTOVINSKI', () => {
       cy.get('select#vrsta_kredita').select('GOTOVINSKI')
       cy.get('select#rok_otplate option').then(($opts) => {
-        const values = [...$opts].map((o) => o.value).filter(Boolean)
+        const values = [...$opts].map((o) => (o as HTMLOptionElement).value).filter(Boolean)
         expect(values).to.deep.equal(['12', '24', '36', '48', '60', '72', '84'])
       })
     })
@@ -255,7 +255,7 @@ describe('Krediti — Klijentski portal', () => {
     it('rok otplate ima opcije 60–360 za STAMBENI', () => {
       cy.get('select#vrsta_kredita').select('STAMBENI')
       cy.get('select#rok_otplate option').then(($opts) => {
-        const values = [...$opts].map((o) => o.value).filter(Boolean)
+        const values = [...$opts].map((o) => (o as HTMLOptionElement).value).filter(Boolean)
         expect(values).to.deep.equal(['60', '120', '180', '240', '300', '360'])
       })
     })
@@ -337,3 +337,5 @@ describe('Krediti — Klijentski portal', () => {
     })
   })
 })
+
+export {}

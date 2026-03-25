@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Landmark } from 'lucide-react'
+import { Check, Copy, Landmark } from 'lucide-react'
 import { getCreditDetails } from '@/services/kreditService'
 import Dialog from '@/components/common/Dialog'
 import type { KreditDetail } from '@/types'
@@ -52,6 +52,14 @@ export default function KreditDetailsDialog({ kreditId, onClose }: Props) {
   const [detail, setDetail] = useState<KreditDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
+
+  function copyBrojKredita(value: string) {
+    navigator.clipboard.writeText(value).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   useEffect(() => {
     setLoading(true)
@@ -87,7 +95,16 @@ export default function KreditDetailsDialog({ kreditId, onClose }: Props) {
           </div>
 
           <FieldRow label="Broj kredita" value={
-            <span className="font-mono text-xs tracking-wide">{detail.kredit.broj_kredita}</span>
+            <span className="flex items-center gap-2">
+              <span className="font-mono text-xs tracking-wide">{detail.kredit.broj_kredita}</span>
+              <button
+                onClick={() => copyBrojKredita(detail.kredit.broj_kredita)}
+                className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-gray-500 hover:bg-gray-100 transition-colors"
+                title="Kopiraj broj kredita"
+              >
+                {copied ? <Check className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+              </button>
+            </span>
           } />
           <FieldRow label="Vrsta kredita" value={VRSTA_LABEL[detail.kredit.vrsta_kredita] ?? detail.kredit.vrsta_kredita} />
           <FieldRow label="Tip kamatne stope" value={detail.kredit.tip_kamate === 'FIKSNA' ? 'Fiksna' : 'Varijabilna'} />

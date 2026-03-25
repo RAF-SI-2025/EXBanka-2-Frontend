@@ -153,6 +153,16 @@ export async function createTransferIntent(params: {
   }
 }
 
+// ─── Approve Pending Action (generates verification code) ─────────────────────
+
+export async function approvePendingAction(actionId: string): Promise<string> {
+  const res = await apiPost<Record<string, never>, { verificationCode: string }>(
+    `/bank/transactions/${actionId}/approve`,
+    {}
+  )
+  return res.verificationCode
+}
+
 // ─── Verify and Execute Payment ───────────────────────────────────────────────
 
 export async function verifyAndExecutePayment(intentId: string, code: string): Promise<PaymentIntent> {

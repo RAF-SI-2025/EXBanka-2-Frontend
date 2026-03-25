@@ -1,6 +1,11 @@
 import jsPDF from 'jspdf'
 import type { PaymentIntent } from '@/types'
 
+/** Uklanja dijakritičke znakove (š,č,ž,ć,đ itd.) — jsPDF helvetica ne podržava UTF-8 ekstenzije. */
+function stripDiacritics(str: string): string {
+  return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
 function formatAmount(amount: number, currency: string): string {
   return `${amount.toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
 }
@@ -61,7 +66,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
   doc.setTextColor(30, 58, 138)
   doc.setFontSize(13)
   doc.setFont('helvetica', 'bold')
-  doc.text('Detalji transakcije', col1, y)
+  doc.text('Detalji transakcije', col1, y) // ASCII only
   y += 8
 
   // Status line
@@ -71,7 +76,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
   doc.text('Tip:', col1, y)
   doc.setTextColor(30, 30, 30)
   doc.setFont('helvetica', 'bold')
-  doc.text(tipLabel(detail.tip_transakcije), col1 + 20, y)
+  doc.text(stripDiacritics(tipLabel(detail.tip_transakcije)), col1 + 20, y)
 
   doc.setFont('helvetica', 'normal')
   doc.setTextColor(100, 100, 100)
@@ -94,7 +99,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
     doc.setFont('helvetica', 'normal')
     doc.setFontSize(8.5)
     doc.setTextColor(120, 120, 120)
-    doc.text(label, col1, y)
+    doc.text(stripDiacritics(label), col1, y)
 
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
@@ -103,13 +108,13 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
     } else {
       doc.setTextColor(30, 30, 30)
     }
-    doc.text(value || '—', col2, y)
+    doc.text(stripDiacritics(value || '—'), col2, y)
     y += 7
   }
 
   row('Broj naloga:', detail.broj_naloga)
   row('Datum kreiranja:', formatDate(detail.created_at))
-  if (detail.executed_at) row('Datum izvršenja:', formatDate(detail.executed_at))
+  if (detail.executed_at) row('Datum izvrsenja:', formatDate(detail.executed_at))
 
   y += 2
   doc.setDrawColor(220, 220, 220)
@@ -119,7 +124,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   doc.setTextColor(30, 58, 138)
-  doc.text('Podaci o plaćanju', col1, y)
+  doc.text('Podaci o placanju', col1, y)
   y += 7
 
   row('Račun platioca:', detail.broj_racuna_platioca)
@@ -134,11 +139,11 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
   doc.setFont('helvetica', 'bold')
   doc.setFontSize(9)
   doc.setTextColor(30, 58, 138)
-  doc.text('Finansijski detalji', col1, y)
+  doc.text('Finansijski detalji', col1, y) // ASCII only
   y += 7
 
   row('Iznos:', formatAmount(detail.iznos, detail.valuta), [30, 58, 138])
-  if (detail.provizija > 0) row('Provizija banke:', formatAmount(detail.provizija, 'EUR'))
+  if (detail.provizija > 0) row('Provizija banke:', formatAmount(detail.provizija, detail.valuta))
   if (detail.krajnji_iznos > 0 && detail.krajnji_iznos !== detail.iznos) {
     row('Ukupno zaduženo:', formatAmount(detail.krajnji_iznos, detail.valuta), [220, 38, 38])
   }
@@ -152,7 +157,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
     doc.setFont('helvetica', 'bold')
     doc.setFontSize(9)
     doc.setTextColor(30, 58, 138)
-    doc.text('Dodatne informacije', col1, y)
+    doc.text('Dodatne informacije', col1, y) // ASCII only
     y += 7
 
     if (detail.sifra_placanja) row('Šifra plaćanja:', detail.sifra_placanja)
@@ -176,7 +181,7 @@ export function downloadPaymentReceipt(detail: PaymentIntent): void {
   doc.setFontSize(7)
   doc.setTextColor(150, 150, 150)
   doc.text(
-    'EXBanka d.o.o. — Ovo je automatski generisana potvrda i ne zahteva pečat ni potpis.',
+    'EXBanka d.o.o. — Ovo je automatski generisana potvrda i ne zahteva pecat ni potpis.',
     pageW / 2,
     footerY + 5,
     { align: 'center' }
