@@ -64,3 +64,5 @@ describe('Login Page', () => {
     cy.url().should('include', '/forgot-password')
   })
 })
+
+export {}

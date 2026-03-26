@@ -1,4 +1,5 @@
 // Custom Cypress commands
+/* eslint-disable @typescript-eslint/no-namespace -- Cypress typings use namespace merging */
 
 Cypress.Commands.add('login', (email: string, password: string) => {
   cy.visit('/login')
@@ -10,7 +11,9 @@ Cypress.Commands.add('login', (email: string, password: string) => {
 declare global {
   namespace Cypress {
     interface Chainable {
-      login(email: string, password: string): Chainable<void>
+      login(email: string, password: string): Cypress.Chainable<void>
     }
   }
 }
+
+export {}

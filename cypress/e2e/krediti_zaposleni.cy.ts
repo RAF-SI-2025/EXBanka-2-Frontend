@@ -408,3 +408,5 @@ describe('Krediti — Zaposleni: Varijabilna kamatna stopa', () => {
     cy.contains('Unos varijabilne kamatne stope').should('not.exist')
   })
 })
+
+export {}

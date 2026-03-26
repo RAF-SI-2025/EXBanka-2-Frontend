@@ -259,3 +259,5 @@ describe('Menjačnica – negative case: insufficient funds', () => {
     cy.get('[data-testid="execute-button"]').should('not.exist')
   })
 })
+
+export {}

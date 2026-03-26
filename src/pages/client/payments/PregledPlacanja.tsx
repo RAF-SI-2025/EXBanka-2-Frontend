@@ -246,7 +246,7 @@ export default function PregledPlacanja() {
               <FieldRow label="Račun primaoca" value={<span className="font-mono">{detail.broj_racuna_primaoca}</span>} />
               <FieldRow label="Iznos" value={<span className="text-primary-700 font-bold">{formatAmount(detail.iznos, detail.valuta)}</span>} />
               {detail.provizija > 0 && <FieldRow label="Provizija" value={formatAmount(detail.provizija, detail.valuta)} />}
-              {detail.krajnji_iznos > 0 && <FieldRow label="Ukupno zaduženo" value={formatAmount(detail.krajnji_iznos, detail.valuta)} />}
+              {detail.provizija > 0 && detail.krajnji_iznos > 0 && <FieldRow label="Ukupno zaduženo" value={formatAmount(detail.krajnji_iznos, detail.valuta)} />}
               {detail.sifra_placanja && <FieldRow label="Šifra plaćanja" value={detail.sifra_placanja} />}
               {detail.poziv_na_broj && <FieldRow label="Poziv na broj" value={detail.poziv_na_broj} />}
               {detail.svrha_placanja && <FieldRow label="Svrha plaćanja" value={detail.svrha_placanja} />}

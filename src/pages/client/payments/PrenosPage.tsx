@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { ArrowLeft, ArrowRight, CheckCircle2, Download } from 'lucide-react'
-import { getClientAccounts } from '@/services/bankaService'
-import { createTransferIntent, verifyAndExecutePayment } from '@/services/paymentService'
+import { ArrowLeft, ArrowRight, CheckCircle2, Download, XCircle } from 'lucide-react'
+import { getClientAccounts, getExchangeRate, createExchangeTransferIntent } from '@/services/bankaService'
+import { createTransferIntent, approvePendingAction, verifyAndExecutePayment } from '@/services/paymentService'
 import type { AccountListItem, CreatePaymentIntentResult } from '@/types'
 import { downloadPaymentReceipt } from '@/utils/pdfReceipt'
 
@@ -26,13 +26,20 @@ export default function PrenosPage() {
   const [svrha, setSvrha] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
 
+  // Cross-currency conversion preview
+  const [convertedAmount, setConvertedAmount] = useState<number | null>(null)
+  const [rateLoading, setRateLoading] = useState(false)
+
   const [pendingIntent, setPendingIntent] = useState<CreatePaymentIntentResult | null>(null)
   const [intentLoading, setIntentLoading] = useState(false)
   const [verifyCode, setVerifyCode] = useState('')
   const [verifyError, setVerifyError] = useState<string | null>(null)
   const [verifyLoading, setVerifyLoading] = useState(false)
+  const [attemptCount, setAttemptCount] = useState(0)
+  const [lockedOut, setLockedOut] = useState(false)
 
   const [completedPayment, setCompletedPayment] = useState<import('@/types').PaymentIntent | null>(null)
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null)
 
   useEffect(() => {
     getClientAccounts()
@@ -47,6 +54,20 @@ export default function PrenosPage() {
 
   const fromAccount = accounts.find((a) => a.id === fromId)
   const toAccount = accounts.find((a) => a.id === toId)
+  const isCrossCurrency = !!(fromAccount && toAccount && fromAccount.valuta_oznaka !== toAccount.valuta_oznaka)
+
+  // Fetch converted amount whenever from/to/iznos change and currencies differ
+  useEffect(() => {
+    setConvertedAmount(null)
+    if (!isCrossCurrency || !iznos || isNaN(parseFloat(iznos)) || parseFloat(iznos) <= 0) return
+    if (!fromAccount || !toAccount) return
+
+    setRateLoading(true)
+    getExchangeRate(fromAccount.valuta_oznaka, toAccount.valuta_oznaka, parseFloat(iznos))
+      .then(setConvertedAmount)
+      .catch(() => setConvertedAmount(null))
+      .finally(() => setRateLoading(false))
+  }, [fromId, toId, iznos, isCrossCurrency]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Step 1: validate form → go to confirm ─────────────────────────────────
 
@@ -57,16 +78,13 @@ export default function PrenosPage() {
     if (!fromId || !toId) { setFormError('Odaberite oba računa.'); return }
     if (fromId === toId) { setFormError('Račun platioca i primaoca ne smeju biti isti.'); return }
 
-    // Currency validation — cannot transfer between different currencies
-    if (fromAccount && toAccount && fromAccount.valuta_oznaka !== toAccount.valuta_oznaka) {
-      setFormError(
-        `Prenos nije moguć između računa različitih valuta (${fromAccount.valuta_oznaka} → ${toAccount.valuta_oznaka}). Odaberite račune u istoj valuti.`
-      )
-      return
-    }
-
     const iznNum = parseFloat(iznos)
     if (!iznos || isNaN(iznNum) || iznNum <= 0) { setFormError('Unesite ispravan iznos.'); return }
+
+    if (isCrossCurrency && convertedAmount === null) {
+      setFormError('Nije moguće izračunati kurs. Pokušajte ponovo.')
+      return
+    }
 
     setStep('confirm')
   }
@@ -77,15 +95,41 @@ export default function PrenosPage() {
     const iznNum = parseFloat(iznos)
     setIntentLoading(true)
     setVerifyError(null)
+    setAttemptCount(0)
+    setLockedOut(false)
     try {
-      const result = await createTransferIntent({
-        idempotencyKey:  crypto.randomUUID(),
-        racunPlatiocaId: Number(fromId),
-        racunPrimaocaId: Number(toId),
-        iznos:           iznNum,
-        svrhaPlacanja:   svrha.trim(),
-      })
-      setPendingIntent(result)
+      let actionId: string
+      if (isCrossCurrency && convertedAmount !== null) {
+        const result = await createExchangeTransferIntent({
+          idempotencyKey:  crypto.randomUUID(),
+          sourceAccountId: fromId,
+          targetAccountId: toId,
+          amount:          iznNum,
+          convertedAmount: convertedAmount,
+          svrhaPlacanja:   svrha.trim() || 'Prenos između računa',
+        })
+        actionId = String(result.actionId)
+        setPendingIntent({
+          intent_id:   result.intentId,
+          action_id:   actionId,
+          broj_naloga: result.brojNaloga,
+          status:      result.status,
+          valuta:      fromAccount?.valuta_oznaka ?? '',
+          iznos:       iznNum,
+        })
+      } else {
+        const result = await createTransferIntent({
+          idempotencyKey:  crypto.randomUUID(),
+          racunPlatiocaId: Number(fromId),
+          racunPrimaocaId: Number(toId),
+          iznos:           iznNum,
+          svrhaPlacanja:   svrha.trim(),
+        })
+        actionId = result.action_id
+        setPendingIntent(result)
+      }
+      const code = await approvePendingAction(actionId)
+      setGeneratedCode(code)
       setVerifyCode('')
       setStep('verify')
     } catch (err: unknown) {
@@ -100,6 +144,7 @@ export default function PrenosPage() {
   async function handleVerify() {
     if (!pendingIntent) return
     if (verifyCode.length !== 6) { setVerifyError('Unesite 6-cifreni kod.'); return }
+    if (lockedOut) return
 
     setVerifyLoading(true)
     setVerifyError(null)
@@ -110,15 +155,22 @@ export default function PrenosPage() {
     } catch (err: unknown) {
       const e = err as Error
       if (e.message?.includes('otkazan') || e.message?.includes('previše')) {
-        setVerifyError('Nalog je otkazan — previše neuspešnih pokušaja. Kreirajte novi nalog.')
-        setPendingIntent(null)
-        setStep('form')
+        setLockedOut(true)
+        setVerifyError('Nalog je otkazan — previše neuspešnih pokušaja.')
       } else if (e.message?.includes('istekao')) {
         setVerifyError('Kod je istekao. Kreirajte novi nalog.')
         setPendingIntent(null)
+        setGeneratedCode(null)
         setStep('form')
       } else {
-        setVerifyError(e.message)
+        const newCount = attemptCount + 1
+        setAttemptCount(newCount)
+        if (newCount >= 3) {
+          setLockedOut(true)
+          setVerifyError('Previše neuspešnih pokušaja. Nalog je otkazan.')
+        } else {
+          setVerifyError(`Pogrešan kod. Pokušaj ${newCount}/3.`)
+        }
       }
     } finally {
       setVerifyLoading(false)
@@ -163,7 +215,7 @@ export default function PrenosPage() {
               Pregled plaćanja
             </button>
             <button
-              onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setIznos(''); setSvrha(''); setCompletedPayment(null) }}
+              onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setIznos(''); setSvrha(''); setCompletedPayment(null); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
               className="btn btn-primary text-sm"
             >
               Novi prenos
@@ -179,80 +231,115 @@ export default function PrenosPage() {
   if (step === 'verify') {
     return (
       <div className="max-w-lg space-y-6">
-        <button
-          onClick={() => { setStep('confirm'); setPendingIntent(null) }}
-          className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Nazad
-        </button>
+        {!lockedOut && (
+          <button
+            onClick={() => { setStep('confirm'); setPendingIntent(null); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
+            className="flex items-center gap-1 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" /> Nazad
+          </button>
+        )}
 
         <h1 className="text-2xl font-bold text-gray-900">Verifikacija prenosa</h1>
 
-        <div className="card space-y-5">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1">
-            <p className="font-semibold">Nalog je kreiran — otvorite mobilnu aplikaciju</p>
-            <p>Pronađite zahtev u sekciji &ldquo;Pending Approvals&rdquo; i pritisnite &ldquo;Approve Transaction&rdquo;.</p>
-            <p>Mobilna aplikacija će vam prikazati 6-cifreni verifikacioni kod.</p>
-          </div>
-
-          {pendingIntent && fromAccount && toAccount && (
-            <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
-              <div className="flex items-center justify-between">
-                <div className="truncate">
-                  <p className="font-medium text-gray-800">{fromAccount.naziv_racuna}</p>
-                  <p className="font-mono text-gray-400">{fromAccount.broj_racuna}</p>
-                </div>
-                <ArrowRight className="h-3.5 w-3.5 mx-2 shrink-0 text-gray-400" />
-                <div className="truncate text-right">
-                  <p className="font-medium text-gray-800">{toAccount.naziv_racuna}</p>
-                  <p className="font-mono text-gray-400">{toAccount.broj_racuna}</p>
-                </div>
-              </div>
-              <div className="flex justify-between pt-1 border-t border-gray-200">
-                <span>Iznos</span>
-                <span className="font-semibold">{formatAmount(pendingIntent.iznos, pendingIntent.valuta)}</span>
-              </div>
+        {lockedOut ? (
+          <div className="card space-y-5">
+            <div className="text-center py-6 space-y-4">
+              <XCircle className="mx-auto h-12 w-12 text-red-500" />
+              <h2 className="text-lg font-bold text-gray-900">Prenos nije uspeo</h2>
+              <p className="text-sm text-red-600">{verifyError}</p>
             </div>
-          )}
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Verifikacioni kod (6 cifara)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={6}
-              value={verifyCode}
-              onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
-              className="input w-full text-center text-2xl font-mono tracking-widest"
-              placeholder="• • • • • •"
-              autoFocus
-            />
-            <p className="text-xs text-gray-400 mt-1">Kod važi 5 minuta · Nakon 3 neuspešna pokušaja nalog se otkazuje</p>
+            <div className="flex justify-center">
+              <button
+                onClick={() => { setStep('form'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false); setVerifyError(null); setGeneratedCode(null) }}
+                className="btn btn-primary"
+              >
+                Nazad na prenos
+              </button>
+            </div>
           </div>
+        ) : (
+          <div className="card space-y-5">
+            {generatedCode ? (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center space-y-1">
+                <p className="text-sm font-semibold text-blue-800">Verifikacioni kod</p>
+                <p className="text-3xl font-mono font-bold tracking-widest text-blue-900">{generatedCode}</p>
+                <p className="text-xs text-blue-600">Kod važi 5 minuta</p>
+              </div>
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800 space-y-1">
+                <p className="font-semibold">Nalog je kreiran — otvorite mobilnu aplikaciju</p>
+                <p>Pronađite zahtev u sekciji &ldquo;Pending Approvals&rdquo; i pritisnite &ldquo;Approve Transaction&rdquo;.</p>
+                <p>Mobilna aplikacija će vam prikazati 6-cifreni verifikacioni kod.</p>
+              </div>
+            )}
 
-          {verifyError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{verifyError}</div>
-          )}
+            {pendingIntent && fromAccount && toAccount && (
+              <div className="bg-gray-50 rounded-lg p-3 text-xs text-gray-600 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="truncate">
+                    <p className="font-medium text-gray-800">{fromAccount.naziv_racuna}</p>
+                    <p className="font-mono text-gray-400">{fromAccount.broj_racuna}</p>
+                  </div>
+                  <ArrowRight className="h-3.5 w-3.5 mx-2 shrink-0 text-gray-400" />
+                  <div className="truncate text-right">
+                    <p className="font-medium text-gray-800">{toAccount.naziv_racuna}</p>
+                    <p className="font-mono text-gray-400">{toAccount.broj_racuna}</p>
+                  </div>
+                </div>
+                <div className="flex justify-between pt-1 border-t border-gray-200">
+                  <span>Iznos</span>
+                  <span className="font-semibold">{formatAmount(pendingIntent.iznos, pendingIntent.valuta)}</span>
+                </div>
+                {isCrossCurrency && convertedAmount !== null && (
+                  <div className="flex justify-between text-blue-700">
+                    <span>Prima (konvertovano)</span>
+                    <span className="font-semibold">{formatAmount(convertedAmount, toAccount.valuta_oznaka)}</span>
+                  </div>
+                )}
+              </div>
+            )}
 
-          <div className="flex gap-3 justify-end">
-            <button
-              type="button"
-              onClick={() => { setStep('confirm'); setPendingIntent(null); setVerifyCode('') }}
-              className="btn btn-secondary"
-              disabled={verifyLoading}
-            >
-              Nazad
-            </button>
-            <button
-              type="button"
-              onClick={handleVerify}
-              disabled={verifyLoading || verifyCode.length !== 6}
-              className="btn btn-primary"
-            >
-              {verifyLoading ? 'Proveravanje…' : 'Potvrdi prenos'}
-            </button>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Verifikacioni kod (6 cifara)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={6}
+                value={verifyCode}
+                onChange={(e) => setVerifyCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                className="input w-full text-center text-2xl font-mono tracking-widest"
+                placeholder="• • • • • •"
+                autoFocus
+                disabled={lockedOut}
+              />
+              <p className="text-xs text-gray-400 mt-1">Kod važi 5 minuta · Nakon 3 neuspešna pokušaja nalog se otkazuje</p>
+            </div>
+
+            {verifyError && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-sm text-red-700">{verifyError}</div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                type="button"
+                onClick={() => { setStep('confirm'); setPendingIntent(null); setVerifyCode(''); setAttemptCount(0); setLockedOut(false); setGeneratedCode(null) }}
+                className="btn btn-secondary"
+                disabled={verifyLoading}
+              >
+                Nazad
+              </button>
+              <button
+                type="button"
+                onClick={handleVerify}
+                disabled={verifyLoading || verifyCode.length !== 6 || lockedOut}
+                className="btn btn-primary"
+              >
+                {verifyLoading ? 'Proveravanje…' : 'Potvrdi prenos'}
+              </button>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     )
   }
@@ -260,6 +347,7 @@ export default function PrenosPage() {
   // ── Confirm step ──────────────────────────────────────────────────────────
 
   if (step === 'confirm') {
+    const currency = fromAccount?.valuta_oznaka ?? ''
     return (
       <div className="max-w-lg space-y-6">
         <button
@@ -293,9 +381,19 @@ export default function PrenosPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Iznos</span>
                 <span className="font-bold text-gray-900">
-                  {formatAmount(parseFloat(iznos), fromAccount?.valuta_oznaka ?? '')}
+                  {formatAmount(parseFloat(iznos), currency)}
                 </span>
               </div>
+              {isCrossCurrency && (
+                <div className="flex justify-between text-blue-700">
+                  <span>Prima (konvertovano)</span>
+                  <span className="font-semibold">
+                    {convertedAmount !== null
+                      ? formatAmount(convertedAmount, toAccount?.valuta_oznaka ?? '')
+                      : '…'}
+                  </span>
+                </div>
+              )}
               {svrha && (
                 <div className="flex justify-between">
                   <span className="text-gray-500">Svrha</span>
@@ -304,7 +402,7 @@ export default function PrenosPage() {
               )}
               <div className="flex justify-between text-xs text-gray-400">
                 <span>Provizija</span>
-                <span>0 EUR (ista valuta)</span>
+                <span>0 {currency}</span>
               </div>
             </div>
           </div>
@@ -325,7 +423,7 @@ export default function PrenosPage() {
             <button
               type="button"
               onClick={handleConfirm}
-              disabled={intentLoading}
+              disabled={intentLoading || (isCrossCurrency && convertedAmount === null)}
               className="btn btn-primary"
             >
               {intentLoading ? 'Kreiranje naloga…' : 'Potvrdi'}
@@ -375,9 +473,9 @@ export default function PrenosPage() {
               </option>
             ))}
           </select>
-          {toAccount && fromAccount && fromAccount.valuta_oznaka !== toAccount.valuta_oznaka && (
-            <p className="text-xs text-red-600 mt-1 font-medium">
-              Prenos između računa različitih valuta nije dozvoljen.
+          {isCrossCurrency && (
+            <p className="text-xs text-blue-600 mt-1">
+              Konverzija valuta: {fromAccount?.valuta_oznaka} → {toAccount?.valuta_oznaka}
             </p>
           )}
         </div>
@@ -396,6 +494,15 @@ export default function PrenosPage() {
             placeholder="0.00"
             required
           />
+          {isCrossCurrency && iznos && !isNaN(parseFloat(iznos)) && parseFloat(iznos) > 0 && (
+            <p className="text-xs text-blue-600 mt-1">
+              {rateLoading
+                ? 'Računanje kursa…'
+                : convertedAmount !== null
+                  ? `Primalac prima ≈ ${formatAmount(convertedAmount, toAccount?.valuta_oznaka ?? '')}`
+                  : 'Nije moguće izračunati kurs'}
+            </p>
+          )}
         </div>
 
         <div>
