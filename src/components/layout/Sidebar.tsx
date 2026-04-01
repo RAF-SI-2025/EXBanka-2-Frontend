@@ -17,6 +17,7 @@ import {
   ChevronDown,
   ChevronRight,
   TrendingUp,
+  BarChart2,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 
@@ -50,6 +51,18 @@ const NAV_ITEMS: NavItem[] = [
     icon: <UserPlus className="h-5 w-5" />,
     roles: ['ADMIN'],
     permission: 'MANAGE_USERS',
+  },
+  {
+    label: 'Berze',
+    to: '/admin/exchanges',
+    icon: <TrendingUp className="h-5 w-5" />,
+    roles: ['ADMIN'],
+  },
+  {
+    label: 'Hartije od vrednosti',
+    to: '/hartije',
+    icon: <BarChart2 className="h-5 w-5" />,
+    roles: ['ADMIN'],
   },
   // ── Employee ───────────────────────────────────────────────────────────
   {
@@ -107,6 +120,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <TrendingUp className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
+  {
+    label: 'Hartije od vrednosti',
+    to: '/hartije',
+    icon: <BarChart2 className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
 
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',                                    roles: ['CLIENT'] },
@@ -115,7 +134,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Menjačnica', to: '/client/exchange',                           roles: ['CLIENT'] },
   { label: 'Kartice',    to: '/client/cards',                              roles: ['CLIENT'] },
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
-  { label: 'Berze',      to: '/client/exchanges', permission: 'TRADE_STOCKS', roles: ['CLIENT'] },
+  { label: 'Berze',      to: '/client/exchanges',                           roles: ['CLIENT'] },
+  { label: 'Hartije od vrednosti', to: '/hartije', roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [
