@@ -182,6 +182,38 @@ export async function getClientAccounts(): Promise<AccountListItem[]> {
   }))
 }
 
+/** Kreiranje naloga za hartiju — backend proverava raspoloživo stanje (ne knjiži punu trgovinu). */
+export async function createListingOrder(payload: {
+  accountId: string | number
+  listingId: string | number
+  side: 'BUY' | 'SELL'
+  orderType: 'MARKET' | 'LIMIT' | 'STOP'
+  quantity: number
+  limitPrice?: number
+  stopPrice?: number
+}): Promise<{ message?: string }> {
+  return apiPost<
+    {
+      accountId: number
+      listingId: number
+      side: string
+      orderType: string
+      quantity: number
+      limitPrice: number
+      stopPrice: number
+    },
+    { message?: string }
+  >('/bank/listings/orders', {
+    accountId: Number(payload.accountId),
+    listingId: Number(payload.listingId),
+    side: payload.side,
+    orderType: payload.orderType,
+    quantity: payload.quantity,
+    limitPrice: payload.limitPrice ?? 0,
+    stopPrice: payload.stopPrice ?? 0,
+  })
+}
+
 // ─── GetAccountDetail ─────────────────────────────────────────────────────────
 
 export async function getAccountDetail(id: string): Promise<AccountDetail> {

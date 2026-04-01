@@ -452,3 +452,56 @@ export interface KreditZahtev {
   datum_podnosenja: string
   status: StatusZahteva
 }
+
+// ─── Listings (Hartije od vrednosti) ─────────────────────────────────────────
+
+export type ListingType = 'STOCK' | 'FOREX' | 'FUTURE' | 'OPTION'
+
+export interface Listing {
+  id: string               // int64 → string (gRPC-Gateway serijalizacija)
+  ticker: string
+  name: string
+  listingType: ListingType
+  exchangeId: string
+  price: number
+  ask: number
+  bid: number
+  volume: string           // int64 → string; koristiti parseInt() pri prikazu
+  changePercent: number
+  dollarVolume: number
+  initialMarginCost: number
+  lastRefresh: string      // ISO 8601 string ili ""
+}
+
+export interface ListingDetail {
+  base: Listing
+  nominalValue: number
+  contractSize: number
+  maintenanceMargin: number
+  detailsJson: string
+}
+
+export interface ListingHistoryItem {
+  date: string             // "YYYY-MM-DD"
+  price: number
+  askHigh: number
+  bidLow: number
+  priceChange: number
+  volume: string
+}
+
+export interface ListingsFilter {
+  listingType?: ListingType | ''
+  search?: string
+  minPrice?: number
+  maxPrice?: number
+  minVolume?: number
+  maxVolume?: number
+  /** YYYY-MM-DD — FUTURE/OPTION (settlement_date u details_json) */
+  settlementFrom?: string
+  settlementTo?: string
+  sortBy?: 'price' | 'volume' | 'change' | 'ticker'
+  sortOrder?: 'ASC' | 'DESC'
+  page?: number
+  pageSize?: number
+}

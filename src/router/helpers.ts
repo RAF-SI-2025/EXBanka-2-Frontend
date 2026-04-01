@@ -1,5 +1,20 @@
 import type { UserType } from '@/types'
 
+/** Kanonska baza ruta za hartije od vrednosti (klijenti i zaposleni). */
+export const HARTIJE_BASE = '/hartije'
+
+export function hartijeListPath(): string {
+  return HARTIJE_BASE
+}
+
+export function hartijeDetailPath(id: string): string {
+  return `${HARTIJE_BASE}/${id}`
+}
+
+export function hartijeKupovinaPath(id: string): string {
+  return `${HARTIJE_BASE}/kupovina/${id}`
+}
+
 export function getHomeForRole(userType?: UserType): string {
   switch (userType) {
     case 'ADMIN':

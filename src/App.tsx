@@ -1,5 +1,6 @@
-import { createBrowserRouter, RouterProvider, Route, Navigate, createRoutesFromElements } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider, Route, Navigate, createRoutesFromElements, useParams } from 'react-router-dom'
 import PrivateRoute from './router/PrivateRoute'
+import HartijePortalRoute from './router/HartijePortalRoute'
 import Layout from '@/components/layout/Layout'
 
 // Auth pages (public)
@@ -51,7 +52,26 @@ import ActuaryManagement from '@/pages/employee/actuaries/ActuaryManagement'
 // Berze (shared: employees + clients)
 import ExchangesPage from '@/pages/employee/ExchangesPage'
 
+// Hartije od vrednosti (client)
+import ListingsPage from '@/pages/client/listings/ListingsPage'
+import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
+import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
+
 import NotFoundPage from '@/pages/NotFoundPage'
+
+function RedirectClientHartijeToCanonical() {
+  return <Navigate to="/hartije" replace />
+}
+
+function RedirectClientHartijeDetailToCanonical() {
+  const { id } = useParams()
+  return <Navigate to={id ? `/hartije/${id}` : '/hartije'} replace />
+}
+
+function RedirectClientCreateOrderToCanonical() {
+  const { id } = useParams()
+  return <Navigate to={id ? `/hartije/kupovina/${id}` : '/hartije'} replace />
+}
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -71,9 +91,16 @@ const router = createBrowserRouter(
             <Route path="employees" element={<EmployeeList />} />
             <Route path="employees/new" element={<CreateEmployee />} />
             <Route path="employees/:id/edit" element={<EditEmployee />} />
+            <Route path="exchanges" element={<ExchangesPage />} />
           </Route>
 
           {/* Employee home */}
+          <Route element={<HartijePortalRoute />}>
+            <Route path="/hartije" element={<ListingsPage />} />
+            <Route path="/hartije/:id" element={<ListingDetailsPage />} />
+            <Route path="/hartije/kupovina/:id" element={<CreateOrderPage />} />
+          </Route>
+
           <Route path="/employee" element={<PrivateRoute requiredRole="EMPLOYEE" />}>
             <Route index element={<EmployeePage />} />
             <Route path="clients" element={<ClientListPage />} />
@@ -103,6 +130,9 @@ const router = createBrowserRouter(
             <Route path="credits/new" element={<KreditZahtevForm />} />
             <Route path="exchange" element={<MenjacnicaPage />} />
             <Route path="exchanges" element={<ExchangesPage />} />
+            <Route path="hartije" element={<RedirectClientHartijeToCanonical />} />
+            <Route path="hartije/:id" element={<RedirectClientHartijeDetailToCanonical />} />
+            <Route path="create-order/:id" element={<RedirectClientCreateOrderToCanonical />} />
           </Route>
         </Route>
       </Route>
