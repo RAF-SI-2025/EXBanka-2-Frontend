@@ -92,6 +92,7 @@ const router = createBrowserRouter(
             <Route path="employees/new" element={<CreateEmployee />} />
             <Route path="employees/:id/edit" element={<EditEmployee />} />
             <Route path="exchanges" element={<ExchangesPage />} />
+            <Route path="actuaries" element={<ActuaryManagement />} />
           </Route>
 
           {/* Employee home */}

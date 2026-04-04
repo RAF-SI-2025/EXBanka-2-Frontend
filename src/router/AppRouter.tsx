@@ -56,6 +56,7 @@ export default function AppRouter() {
             <Route path="employees" element={<EmployeeList />} />
             <Route path="employees/new" element={<CreateEmployee />} />
             <Route path="employees/:id/edit" element={<EditEmployee />} />
+            <Route path="actuaries" element={<ActuaryManagement />} />
           </Route>
 
           {/* Employee home */}

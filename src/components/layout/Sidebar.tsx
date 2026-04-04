@@ -112,7 +112,13 @@ const NAV_ITEMS: NavItem[] = [
     to: '/employee/actuaries',
     icon: <UserCheck className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
-    permission: ['SUPERVISOR', 'ADMIN_PERMISSION'],
+    permission: ['SUPERVISOR'],
+  },
+  {
+    label: 'Upravljanje aktuarima',
+    to: '/admin/actuaries',
+    icon: <UserCheck className="h-5 w-5" />,
+    roles: ['ADMIN'],
   },
   {
     label: 'Berze',

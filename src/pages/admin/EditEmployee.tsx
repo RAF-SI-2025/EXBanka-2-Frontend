@@ -148,13 +148,33 @@ export default function EditEmployee() {
 
   const watchedPermissions = watch('permissions') ?? []
 
+  // Derived: true when ADMIN_PERMISSION is in the permissions array (signals admin promotion)
+  const isAdminMode = watchedPermissions.includes('ADMIN_PERMISSION')
+
   const togglePermission = (permName: string) => {
     const current = watchedPermissions
     if (current.includes(permName)) {
       setValue('permissions', current.filter((p) => p !== permName), { shouldDirty: true })
     } else {
-      setValue('permissions', [...current, permName], { shouldDirty: true })
+      // Mutual exclusivity: SUPERVISOR ↔ AGENT
+      let next = [...current, permName]
+      if (permName === 'SUPERVISOR') next = next.filter((p) => p !== 'AGENT')
+      if (permName === 'AGENT')      next = next.filter((p) => p !== 'SUPERVISOR')
+      setValue('permissions', next, { shouldDirty: true })
     }
+  }
+
+  const handleMakeAdmin = () => {
+    // Set all codebook permissions + auto-assign SUPERVISOR + add ADMIN_PERMISSION sentinel
+    const all = permissionsCodebook.map((p) => p.name)
+    if (!all.includes('SUPERVISOR')) all.push('SUPERVISOR')
+    all.push('ADMIN_PERMISSION')
+    setValue('permissions', all, { shouldDirty: true })
+  }
+
+  const handleCancelAdmin = () => {
+    // Revert to whatever the employee originally had
+    setValue('permissions', employee?.permissions ?? [], { shouldDirty: true })
   }
 
   if (loading) {
@@ -294,26 +314,51 @@ export default function EditEmployee() {
           </div>
 
           {/* Permissions */}
-          {permissionsCodebook.length > 0 && (
-            <>
-              <h2 className="text-lg font-semibold text-gray-800 pb-2 border-b pt-4">
-                Permisije
-              </h2>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                {permissionsCodebook.map((perm) => (
-                  <label key={perm.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                      checked={watchedPermissions.includes(perm.name)}
-                      onChange={() => togglePermission(perm.name)}
-                    />
-                    {perm.description ?? perm.name}
-                  </label>
-                ))}
+          <div className="pt-4">
+            <div className="flex items-center justify-between pb-2 border-b">
+              <h2 className="text-lg font-semibold text-gray-800">Permisije</h2>
+              {isAdminMode ? (
+                <Button
+                  type="button"
+                  variant="danger"
+                  onClick={handleCancelAdmin}
+                >
+                  Poništi admin promociju
+                </Button>
+              ) : (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleMakeAdmin}
+                >
+                  Postavi za Admina
+                </Button>
+              )}
+            </div>
+
+            {isAdminMode ? (
+              <div className="mt-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Ovaj zaposleni će biti promovisan u <strong>Administratora</strong> — sve permisije i
+                uloga Supervizora biće automatski dodeljene.
               </div>
-            </>
-          )}
+            ) : (
+              permissionsCodebook.length > 0 && (
+                <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+                  {permissionsCodebook.map((perm) => (
+                    <label key={perm.id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        checked={watchedPermissions.includes(perm.name)}
+                        onChange={() => togglePermission(perm.name)}
+                      />
+                      {perm.description ?? perm.name}
+                    </label>
+                  ))}
+                </div>
+              )
+            )}
+          </div>
         </div>
 
         {/* Actions */}
