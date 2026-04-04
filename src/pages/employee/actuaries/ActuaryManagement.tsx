@@ -245,7 +245,7 @@ function CreateActuaryDialog({
 // ─── Main Component ────────────────────────────────────────────────────────────
 
 export default function ActuaryManagement() {
-  const { hasPermission } = useAuthStore()
+  const { hasPermission, user } = useAuthStore()
 
   const [agents, setAgents]       = useState<EnrichedAgent[]>([])
   const [employees, setEmployees] = useState<Employee[]>([])
@@ -424,14 +424,16 @@ export default function ActuaryManagement() {
             </span>
           )}
         </div>
-        <Button
-          variant="primary"
-          leftIcon={<Plus className="h-4 w-4" />}
-          onClick={openCreateDialog}
-          disabled={loading}
-        >
-          Novi aktuar
-        </Button>
+        {user?.userType === 'ADMIN' && (
+          <Button
+            variant="primary"
+            leftIcon={<Plus className="h-4 w-4" />}
+            onClick={openCreateDialog}
+            disabled={loading}
+          >
+            Novi aktuar
+          </Button>
+        )}
       </div>
 
       {/* Filters */}

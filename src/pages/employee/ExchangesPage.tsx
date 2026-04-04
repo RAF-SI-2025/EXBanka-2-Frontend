@@ -2,9 +2,47 @@ import { useEffect, useRef, useState } from 'react'
 import { TrendingUp, FlaskConical, AlertTriangle, SearchX, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useAuthStore } from '@/store/authStore'
-import { getAllExchanges, toggleMarketTestMode } from '@/services/exchangeService'
-import type { Exchange } from '@/services/exchangeService'
+import { useExchangeStore } from '@/store/useExchangeStore'
+import { getAllExchanges } from '@/services/exchangeService'
+import type { Exchange, MarketStatus } from '@/services/exchangeService'
 import Button from '@/components/common/Button'
+
+// ─── Market status badge ───────────────────────────────────────────────────────
+
+// statusBadgeClasses mapira MarketStatus na Tailwind CSS klase za bedž.
+function statusBadgeClasses(status: MarketStatus | ''): string {
+  switch (status) {
+    case 'OPEN':        return 'bg-green-100 text-green-800'
+    case 'PRE_MARKET':  return 'bg-yellow-100 text-yellow-800'
+    case 'AFTER_HOURS': return 'bg-blue-100 text-blue-800'
+    case 'CLOSED':      return 'bg-gray-100 text-gray-600'
+    default:            return 'bg-gray-100 text-gray-400'
+  }
+}
+
+// statusLabel mapira MarketStatus na prikazan tekst.
+function statusLabel(status: MarketStatus | ''): string {
+  switch (status) {
+    case 'OPEN':        return 'Otvoreno'
+    case 'PRE_MARKET':  return 'Pre-market'
+    case 'AFTER_HOURS': return 'After-hours'
+    case 'CLOSED':      return 'Zatvoreno'
+    default:            return '—'
+  }
+}
+
+function MarketStatusBadge({ status }: { status: MarketStatus | '' }) {
+  return (
+    <span
+      className={[
+        'inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold',
+        statusBadgeClasses(status),
+      ].join(' ')}
+    >
+      {statusLabel(status)}
+    </span>
+  )
+}
 
 // ─── Table helpers ─────────────────────────────────────────────────────────────
 
@@ -35,8 +73,11 @@ export default function ExchangesPage() {
   const { hasPermission } = useAuthStore()
   const isSupervisor = hasPermission('SUPERVISOR')
 
+  // testMode dolazi iz Zustand stora — preživljava navigaciju između ruta.
+  // fetchTestMode čita iz backenda (Redis) pri svakom mount-u — preživljava refresh.
+  const { testMode, fetchTestMode, setTestMode } = useExchangeStore()
+
   const [exchanges, setExchanges] = useState<Exchange[]>([])
-  const [testMode, setTestMode]   = useState(false)
   const [loading, setLoading]     = useState(true)
   const [toggling, setToggling]   = useState(false)
   const [error, setError]         = useState<string | null>(null)
@@ -64,10 +105,12 @@ export default function ExchangesPage() {
     }
   }
 
-  // Initial load
+  // Initial load: uvek čitamo test mode stanje sa backenda i listu berzi.
+  // Na taj način stanje je tačno i nakon browser refresha.
   useEffect(() => {
+    if (isSupervisor) fetchTestMode()
     loadExchanges('', '')
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Re-fetch with 300ms debounce whenever search or polity change
   useEffect(() => {
@@ -83,16 +126,17 @@ export default function ExchangesPage() {
   // ── Toggle test mode ──────────────────────────────────────────────────────
 
   async function handleToggleTestMode() {
-    const next = !testMode
+    const next = !(testMode ?? false)
     setToggling(true)
     try {
-      await toggleMarketTestMode(next)
-      setTestMode(next)
+      await setTestMode(next)
       toast.success(
         next
           ? 'Market Test Mode je aktiviran.'
           : 'Market Test Mode je deaktiviran.'
       )
+      // Odmah osvežavamo listu berzi — statusi se menjaju u skladu sa novim stanjem.
+      await loadExchanges(search, polity)
     } catch (err: unknown) {
       toast.error((err as Error).message || 'Greška pri promeni test moda.')
     } finally {
@@ -106,7 +150,7 @@ export default function ExchangesPage() {
     <div className="space-y-6">
 
       {/* Test mode active banner */}
-      {testMode && (
+      {testMode === true && (
         <div className="flex items-center gap-3 rounded-lg border border-amber-300 bg-amber-50 px-4 py-3">
           <AlertTriangle className="h-5 w-5 shrink-0 text-amber-600" />
           <p className="text-sm font-semibold text-amber-800">
@@ -131,12 +175,13 @@ export default function ExchangesPage() {
         {/* Market Test Mode toggle – SUPERVISOR only */}
         {isSupervisor && (
           <Button
-            variant={testMode ? 'primary' : 'secondary'}
+            variant={testMode === true ? 'primary' : 'secondary'}
             leftIcon={<FlaskConical className="h-4 w-4" />}
-            loading={toggling}
+            loading={toggling || testMode === null}
             onClick={handleToggleTestMode}
+            disabled={testMode === null}
           >
-            {testMode ? 'Deaktiviraj Test Mod' : 'Aktiviraj Test Mod'}
+            {testMode === true ? 'Deaktiviraj Test Mod' : 'Aktiviraj Test Mod'}
           </Button>
         )}
       </div>
@@ -204,9 +249,10 @@ export default function ExchangesPage() {
                 <tr className="border-b border-gray-200 bg-gray-50">
                   <Th>Naziv berze</Th>
                   <Th>Akronim</Th>
-                  <Th>MIC kod</Th>
                   <Th>Država</Th>
+                  <Th>Valuta</Th>
                   <Th>Vremenska zona</Th>
+                  <Th>Status</Th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -217,9 +263,16 @@ export default function ExchangesPage() {
                   >
                     <Td>{ex.name}</Td>
                     <Td mono>{ex.acronym}</Td>
-                    <Td mono>{ex.micCode}</Td>
                     <Td>{ex.polity}</Td>
+                    <Td>
+                      {ex.currencyName || (
+                        <span className="text-gray-400">—</span>
+                      )}
+                    </Td>
                     <Td mono>{ex.timezone}</Td>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <MarketStatusBadge status={ex.marketStatus} />
+                    </td>
                   </tr>
                 ))}
               </tbody>
