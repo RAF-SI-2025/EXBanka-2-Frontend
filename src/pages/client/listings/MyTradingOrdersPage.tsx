@@ -186,6 +186,8 @@ export default function MyTradingOrdersPage() {
 
   useEffect(() => {
     fetchOrders()
+    const interval = setInterval(fetchOrders, 10_000)
+    return () => clearInterval(interval)
   }, [fetchOrders])
 
   const handleCancelConfirm = async () => {

@@ -167,6 +167,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: <ListOrdered className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
+  {
+    label: 'Moj Portfolio',
+    to: '/portfolio',
+    icon: <Banknote className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+  },
 
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',                                    roles: ['CLIENT'] },
@@ -175,9 +181,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Menjačnica', to: '/client/exchange',                           roles: ['CLIENT'] },
   { label: 'Kartice',    to: '/client/cards',                              roles: ['CLIENT'] },
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
-  { label: 'Berze',      to: '/client/exchanges',                           roles: ['CLIENT'] },
-  { label: 'Hartije od vrednosti', to: '/hartije', roles: ['CLIENT'] },
+  { label: 'Berze',      to: '/client/exchanges',                          roles: ['CLIENT'] },
+  { label: 'Hartije od vrednosti', to: '/hartije',          roles: ['CLIENT'] },
   { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'] },
+  { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
 ]
 
 const PAYMENT_SUB_ITEMS = [
