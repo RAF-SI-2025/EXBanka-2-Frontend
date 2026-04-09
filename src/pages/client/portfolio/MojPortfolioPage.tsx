@@ -340,7 +340,7 @@ export default function MojPortfolioPage() {
                               <Button
                                 size="sm"
                                 variant="secondary"
-                                onClick={() => navigate(hartijeKupovinaPath(h.listingId))}
+                                onClick={() => navigate(`${hartijeKupovinaPath(h.listingId)}?direction=SELL`)}
                               >
                                 Prodaj
                               </Button>

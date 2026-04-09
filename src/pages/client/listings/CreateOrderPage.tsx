@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useParams, useNavigate, Navigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Navigate } from 'react-router-dom'
 import { ArrowLeft, ShoppingCart, TrendingUp, TrendingDown, AlertTriangle, Info } from 'lucide-react'
 import { useListingsStore } from '@/store/useListingsStore'
 import { useAuthStore } from '@/store/authStore'
@@ -42,6 +42,7 @@ function needsStopPrice(ot: TradingOrderType)  { return ot === 'STOP'  || ot ===
 
 export default function CreateOrderPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const user = useAuthStore((s) => s.user)
 
@@ -52,7 +53,8 @@ export default function CreateOrderPage() {
     useListingsStore()
 
   // ── Form state ──────────────────────────────────────────────────────────────
-  const [side,        setSide]        = useState<OrderSide>('BUY')
+  const initialSide: OrderSide = searchParams.get('direction') === 'SELL' ? 'SELL' : 'BUY'
+  const [side,        setSide]        = useState<OrderSide>(initialSide)
   const [orderType,   setOrderType]   = useState<TradingOrderType>('MARKET')
   const [quantity,    setQuantity]    = useState('1')
   const [limitPrice,  setLimitPrice]  = useState('')

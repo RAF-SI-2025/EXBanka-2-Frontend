@@ -31,6 +31,8 @@ interface NavItem {
   roles: string[]
   /** Show item only if user has ANY of these permissions */
   permission?: string | string[]
+  /** Pass end=true to NavLink so sub-routes don't also highlight this item */
+  end?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -47,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <Users className="h-5 w-5" />,
     roles: ['ADMIN'],
     permission: 'MANAGE_USERS',
+    end: true,
   },
   {
     label: 'Novi zaposleni',
@@ -66,6 +69,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/hartije',
     icon: <BarChart2 className="h-5 w-5" />,
     roles: ['ADMIN'],
+    end: true,
   },
   // ── Employee ───────────────────────────────────────────────────────────
   {
@@ -79,6 +83,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/employee/clients',
     icon: <Users className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
+    end: true,
   },
   {
     label: 'Kreiraj korisnika',
@@ -91,6 +96,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/employee/accounts',
     icon: <Building2 className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
+    end: true,
   },
   {
     label: 'Kreiraj račun',
@@ -160,6 +166,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/hartije',
     icon: <BarChart2 className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
+    end: true,
   },
   {
     label: 'Moji nalozi',
@@ -182,7 +189,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Kartice',    to: '/client/cards',                              roles: ['CLIENT'] },
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
   { label: 'Berze',      to: '/client/exchanges',                          roles: ['CLIENT'] },
-  { label: 'Hartije od vrednosti', to: '/hartije',          roles: ['CLIENT'] },
+  { label: 'Hartije od vrednosti', to: '/hartije',          roles: ['CLIENT'], end: true },
   { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'] },
   { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
 ]
@@ -266,7 +273,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
             <NavLink
               key={item.to}
               to={item.to}
-              end={item.to === '/admin' || item.to === '/employee' || item.to === '/client'}
+              end={item.end ?? (item.to === '/admin' || item.to === '/employee' || item.to === '/client')}
               onClick={onMobileClose}
               className={({ isActive }) =>
                 [
