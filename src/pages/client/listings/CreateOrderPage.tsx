@@ -9,6 +9,7 @@ import Button from '@/components/common/Button'
 import { hartijeListPath, hartijeDetailPath } from '@/router/helpers'
 import { getClientAccounts } from '@/services/bankaService'
 import { calculateOrder, createTradingOrder } from '@/services/tradingService'
+import { getClientCredits } from '@/services/kreditService'
 import { getAllExchanges } from '@/services/exchangeService'
 import { getMyPortfolio } from '@/services/portfolioService'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
@@ -69,6 +70,7 @@ export default function CreateOrderPage() {
   const [stopPrice,   setStopPrice]   = useState('')
   const [allOrNone,   setAllOrNone]   = useState(false)
   const [margin,      setMargin]      = useState(false)
+  const [hasMarginPermission, setHasMarginPermission] = useState(false)
 
   // Account (client only)
   const [accounts,        setAccounts]        = useState<AccountListItem[]>([])
@@ -136,6 +138,28 @@ export default function CreateOrderPage() {
       cancelled = true
     }
   }, [isClient, isActuaryTrader, preselectedAccountId])
+
+  // ── Margin permission: aktuari uvek mogu, klijenti samo ako imaju odobren kredit ──
+  useEffect(() => {
+    if (isActuaryTrader) {
+      setHasMarginPermission(true)
+      return
+    }
+    if (!isClient) {
+      setHasMarginPermission(false)
+      return
+    }
+    let cancelled = false
+    getClientCredits()
+      .then((credits) => {
+        if (cancelled) return
+        const hasApproved = credits.some((c) => c.status === 'ODOBREN')
+        setHasMarginPermission(hasApproved)
+        if (!hasApproved) setMargin(false)
+      })
+      .catch(() => { if (!cancelled) setHasMarginPermission(false) })
+    return () => { cancelled = true }
+  }, [isClient, isActuaryTrader])
 
   // ── Fetch exchange market status when listing loads ─────────────────────────
   useEffect(() => {
@@ -486,12 +510,12 @@ export default function CreateOrderPage() {
               All or None (AON) — izvršiti samo ako je moguće u celosti
             </span>
           </label>
-          {isActuaryTrader && (
+          {hasMarginPermission && (
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input type="checkbox" checked={margin} onChange={(e) => setMargin(e.target.checked)}
                 className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500" />
               <span className="text-sm text-gray-700">
-                Margin — trgovanje kreditom (zahteva ulogu aktuara)
+                Margin — trgovanje kreditom
               </span>
             </label>
           )}
