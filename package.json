@@ -13,6 +13,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:e2e": "cypress run",
+    "test:e2e:ci": "cypress run --spec 'cypress/e2e/ci/**/*.cy.ts'",
     "test:e2e:open": "cypress open",
     "typecheck:cypress": "tsc --noEmit -p cypress/tsconfig.json",
     "proto:gen": "buf generate"
