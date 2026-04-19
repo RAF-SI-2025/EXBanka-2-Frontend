@@ -8,7 +8,8 @@ export const ADMIN_PASS = 'Admin123'
 // Backend activation secret (from docker-compose).
 // Since the activation token is a plain JWT signed with this secret,
 // we generate it inside the browser using SubtleCrypto.
-export const ACTIVATION_SECRET = 'super_secret_jwt_activation_key'
+// export const ACTIVATION_SECRET = 'super_secret_jwt_activation_key'
+export const ACTIVATION_SECRET = 'change-me-activation-secret'
 
 // ─── Login via UI ─────────────────────────────────────────────────────────────
 
@@ -34,10 +35,7 @@ Cypress.Commands.add('getAdminToken', () => {
 // ─── base64url helpers ────────────────────────────────────────────────────────
 
 function b64url(obj: unknown): string {
-  return btoa(JSON.stringify(obj))
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '')
+  return btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
 }
 
 function b64urlFromUint8(u8: Uint8Array): string {
@@ -68,9 +66,7 @@ Cypress.Commands.add('makeActivationJwt', (email: string) => {
         false,
         ['sign']
       )
-      const sig = new Uint8Array(
-        await crypto.subtle.sign('HMAC', key, enc.encode(data))
-      )
+      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, enc.encode(data)))
       return `${data}.${b64urlFromUint8(sig)}`
     })(),
     { log: false }
