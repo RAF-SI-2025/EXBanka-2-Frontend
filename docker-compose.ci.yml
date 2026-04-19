@@ -1,0 +1,35 @@
+# CI override: pulls backend images from GHCR, uses a locally pre-built
+# frontend image tagged with the current SHA, and rewrites migration volume
+# mounts to absolute paths under $GITHUB_WORKSPACE/backend.
+#
+# Compose layering:
+#   docker compose -f infra/docker-compose.yml -f docker-compose.ci.yml
+#
+# Required env vars at `compose up` time:
+#   GITHUB_WORKSPACE   — path containing ./backend checkout
+#   FRONTEND_IMAGE     — local tag built before `compose up` (no GHCR push)
+
+services:
+  user-service:
+    image: ghcr.io/raf-si-2025/exbanka-2-backend-user-service:latest
+    pull_policy: always
+
+  bank-service:
+    image: ghcr.io/raf-si-2025/exbanka-2-backend-bank-service:latest
+    pull_policy: always
+
+  notification-service:
+    image: ghcr.io/raf-si-2025/exbanka-2-backend-notification-service:latest
+    pull_policy: always
+
+  frontend:
+    image: ${FRONTEND_IMAGE}
+    pull_policy: never
+
+  migrate:
+    volumes:
+      - ${GITHUB_WORKSPACE}/backend/services/user-service/internal/database/migrations:/migrations:ro
+
+  migrate-bank:
+    volumes:
+      - ${GITHUB_WORKSPACE}/backend/services/bank-service/internal/database/migrations:/migrations:ro

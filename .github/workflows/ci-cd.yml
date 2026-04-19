@@ -6,6 +6,7 @@ on:
   push:
     # TODO: ukloniti '**' nakon validacije na forku; ostaviti samo [main]
     branches: [main, '**']
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -129,10 +130,209 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ── Full E2E (real stack iz GHCR) ──────────────────────────────────────────
+  e2e-full:
+    name: Cypress E2E (full stack)
+    runs-on: ubuntu-latest
+    # Skup tuneliran: uvek na push u main; na PR samo ako je labela `full-e2e`
+    # ili je workflow_dispatch-ovan.
+    if: >
+      github.event_name == 'push' ||
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'pull_request' &&
+       contains(github.event.pull_request.labels.*.name, 'full-e2e'))
+    steps:
+      - name: Checkout frontend
+        uses: actions/checkout@v4
+
+      - name: Checkout infrastructure
+        uses: actions/checkout@v4
+        with:
+          repository: RAF-SI-2025/EXBanka-2-Infrastructure
+          path: infra
+
+      - name: Checkout backend (migracije)
+        uses: actions/checkout@v4
+        with:
+          repository: RAF-SI-2025/EXBanka-2-Backend
+          path: backend
+          sparse-checkout: |
+            services/user-service/internal/database/migrations
+            services/bank-service/internal/database/migrations
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci --prefer-offline --no-audit
+
+      - name: Cache Cypress binary
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/Cypress
+          key: cypress-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: |
+            cypress-${{ runner.os }}-
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build frontend image lokalno (SHA tag)
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          load: true
+          tags: exbanka-frontend:ci-${{ github.sha }}
+          build-args: |
+            VITE_API_BASE_URL=/api
+            VITE_MOCK_MODE=false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Napravi .env za stack
+        working-directory: infra
+        run: |
+          cat > .env <<'EOF'
+          POSTGRES_USER=bank_admin
+          POSTGRES_PASSWORD=ci_password
+          POSTGRES_DB=bank_db
+          DB_EXTERNAL_PORT=5433
+
+          RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+
+          USER_SERVICE_HTTP_PORT=8082
+          USER_SERVICE_GRPC_PORT=50052
+          BANK_SERVICE_HTTP_PORT=8083
+          BANK_SERVICE_GRPC_PORT=50054
+
+          JWT_ACCESS_SECRET=ci_access_secret_min_32_chars_padding_xx
+          JWT_REFRESH_SECRET=ci_refresh_secret_min_32_chars_padding_xx
+          JWT_ACTIVATION_SECRET=change-me-activation-secret
+
+          BANK_SERVICE_ADDR=http://bank-service:8080
+          USER_SERVICE_ADDR=user-service:50051
+
+          SMTP_HOST=localhost
+          SMTP_PORT=1025
+          SMTP_USER=ci
+          SMTP_PASS=ci
+          FROM_EMAIL=no-reply@ci.local
+          FRONTEND_URL=http://localhost:3001
+          FRONTEND_HTTP_PORT=3001
+
+          VITE_API_BASE_URL=/api
+          VITE_MOCK_MODE=false
+          VITE_APP_ENV=ci
+          VITE_ACCESS_TOKEN_TTL_MS=900000
+
+          EODHD_API_KEY=
+          FINNHUB_API_KEY=
+          ALPHAVANTAGE_API_KEY=
+          LISTING_REFRESH_INTERVAL_MINUTES=15
+          LISTING_REQUIRE_LIVE_QUOTES=false
+          STATE_REVENUE_ACCOUNT_ID=0
+          EOF
+
+      - name: Pull backend image-ova iz GHCR
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FRONTEND_IMAGE: exbanka-frontend:ci-${{ github.sha }}
+        run: |
+          docker compose \
+            -f infra/docker-compose.yml \
+            -f docker-compose.ci.yml \
+            --env-file infra/.env \
+            pull user-service bank-service notification-service
+
+      - name: Pokreni stack
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FRONTEND_IMAGE: exbanka-frontend:ci-${{ github.sha }}
+        run: |
+          docker compose \
+            -f infra/docker-compose.yml \
+            -f docker-compose.ci.yml \
+            --env-file infra/.env \
+            up -d --wait --wait-timeout 180
+
+      - name: Čekaj da frontend/API odgovore
+        run: |
+          set -e
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:3001/health >/dev/null \
+               && curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8082/ | grep -qE '^(200|404|405)$' \
+               && curl -fsS -o /dev/null -w '%{http_code}' http://localhost:8083/ | grep -qE '^(200|404|405)$'; then
+              echo "Stack spreman."
+              exit 0
+            fi
+            echo "Čekam stack… ($i/60)"
+            sleep 2
+          done
+          echo "Stack nije podignut u roku." >&2
+          docker compose -f infra/docker-compose.yml -f docker-compose.ci.yml ps
+          docker compose -f infra/docker-compose.yml -f docker-compose.ci.yml logs --tail=200
+          exit 1
+
+      - name: Run Cypress (full suite)
+        run: npm run test:e2e:full
+        env:
+          CYPRESS_baseUrl: http://localhost:3001
+
+      - name: Upload Cypress screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cypress-screenshots-full
+          path: cypress/screenshots
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Compose logs on failure
+        if: failure()
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FRONTEND_IMAGE: exbanka-frontend:ci-${{ github.sha }}
+        run: |
+          docker compose \
+            -f infra/docker-compose.yml \
+            -f docker-compose.ci.yml \
+            logs --no-color --tail=500 > compose-logs.txt || true
+
+      - name: Upload compose logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: compose-logs
+          path: compose-logs.txt
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Teardown
+        if: always()
+        env:
+          GITHUB_WORKSPACE: ${{ github.workspace }}
+          FRONTEND_IMAGE: exbanka-frontend:ci-${{ github.sha }}
+        run: |
+          docker compose \
+            -f infra/docker-compose.yml \
+            -f docker-compose.ci.yml \
+            down -v || true
+
   # ── Docker push u GHCR (CD, samo main) ─────────────────────────────────────
   docker-push:
     name: Docker push (GHCR)
-    needs: [lint, cypress, docker-build]
+    needs: [lint, cypress, docker-build, e2e-full]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
