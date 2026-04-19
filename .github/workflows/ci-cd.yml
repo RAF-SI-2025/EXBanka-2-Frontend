@@ -95,6 +95,8 @@ jobs:
 
       - name: Run Cypress
         uses: cypress-io/github-action@v6
+        env:
+          CYPRESS_baseUrl: http://127.0.0.1:3000
         with:
           install-command: npm ci --prefer-offline --no-audit
           start: npm run dev -- --host 127.0.0.1 --port 3000

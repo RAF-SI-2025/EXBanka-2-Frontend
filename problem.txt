@@ -1,0 +1,82 @@
+Run cypress-io/github-action@v6
+  with:
+    install-command: npm ci --prefer-offline --no-audit
+    start: npm run dev -- --host 127.0.0.1 --port 3000
+    wait-on: http://127.0.0.1:3000
+    wait-on-timeout: 120
+    command: npm run test:e2e:ci
+    component: false
+    record: false
+    publish-summary: true
+  env:
+    NODE_VERSION: 20
+Cache hit for: npm-linux-x64-3ee145e0ca333cdab42c7553cb21cc8f334fd07d8d44c06c0434b41800018079a3dbe790b24ddf782c98c9518287bc1041be8ec514f6e1e8bb0305b2d51bfa97
+Cache hit for: cypress-linux-x64-3ee145e0ca333cdab42c7553cb21cc8f334fd07d8d44c06c0434b41800018079a3dbe790b24ddf782c98c9518287bc1041be8ec514f6e1e8bb0305b2d51bfa97
+Received 25165824 of 92659771 (27.2%), 24.0 MBs/sec
+Received 12582912 of 176642933 (7.1%), 12.0 MBs/sec
+Received 92659771 of 92659771 (100.0%), 59.6 MBs/sec
+Cache Size: ~88 MB (92659771 B)
+/usr/bin/tar -xf /home/runner/work/_temp/0f25f1cd-eea3-44ee-a4cd-1719ce3f8dd6/cache.tzst -P -C /home/runner/work/EXBanka-2-Frontend/EXBanka-2-Frontend --use-compress-program unzstd
+Cache restored successfully
+Received 134217728 of 176642933 (76.0%), 64.0 MBs/sec
+Received 176642933 of 176642933 (100.0%), 67.7 MBs/sec
+Cache Size: ~168 MB (176642933 B)
+/usr/bin/tar -xf /home/runner/work/_temp/9e4a51e0-99d2-46b6-95cb-74158bfc3652/cache.tzst -P -C /home/runner/work/EXBanka-2-Frontend/EXBanka-2-Frontend --use-compress-program unzstd
+Cache restored successfully
+install command command "npm ci --prefer-offline --no-audit"
+current working directory "/home/runner/work/EXBanka-2-Frontend/EXBanka-2-Frontend"
+/opt/hostedtoolcache/node/20.20.2/x64/bin/npm ci --prefer-offline --no-audit
+npm warn deprecated whatwg-encoding@3.1.1: Use @exodus/bytes instead for a more spec-conformant and faster implementation
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 598 packages in 7s
+
+132 packages are looking for funding
+  run `npm fund` for details
+/opt/hostedtoolcache/node/20.20.2/x64/bin/npx cypress cache list
+┌─────────┬───────────────────┐
+│ version │ last used         │
+├─────────┼───────────────────┤
+│ 13.17.0 │ a few seconds ago │
+└─────────┴───────────────────┘
+start server command "npm run dev -- --host 127.0.0.1 --port 3000"
+current working directory "/home/runner/work/EXBanka-2-Frontend/EXBanka-2-Frontend"
+waiting on "http://127.0.0.1:3000" with timeout of 120 seconds
+/opt/hostedtoolcache/node/20.20.2/x64/bin/npm run dev -- --host 127.0.0.1 --port 3000
+
+> exbanka-frontend@0.1.0 dev
+> vite --host 127.0.0.1 --port 3000
+
+
+  VITE v5.4.21  ready in 183 ms
+
+  ➜  Local:   http://127.0.0.1:3000/
+Using custom test command: npm run test:e2e:ci
+run tests command "npm run test:e2e:ci"
+current working directory "/home/runner/work/EXBanka-2-Frontend/EXBanka-2-Frontend"
+/opt/hostedtoolcache/node/20.20.2/x64/bin/npm run test:e2e:ci
+
+> exbanka-frontend@0.1.0 test:e2e:ci
+> cypress run --spec 'cypress/e2e/ci/**/*.cy.ts'
+
+
+DevTools listening on ws://127.0.0.1:38761/devtools/browser/1a7f504d-dd62-4358-bb85-290c7d9a5774
+(node:2716) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("file%3A///home/runner/.cache/Cypress/13.17.0/Cypress/resources/app/node_modules/ts-node/esm/transpile-only.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+Cypress could not verify that this server is running:
+
+  > http://localhost:3001
+
+We are verifying this server because it has been configured as your baseUrl.
+
+Cypress automatically waits until your server is accessible before running tests.
+
+We will try connecting to it 3 more times...
+We will try connecting to it 2 more times...
+We will try connecting to it 1 more time...
+
+Cypress failed to verify that your server is running.
+
+Please start this server and then run Cypress again.
+Error: The process '/opt/hostedtoolcache/node/20.20.2/x64/bin/npm' failed with exit code 1
