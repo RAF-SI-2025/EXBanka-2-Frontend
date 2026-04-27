@@ -67,6 +67,24 @@ import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
+// ── Celina 4 – OTC ────────────────────────────────────────────────────────────
+import OTCTradingPage from '@/pages/otc/OTCTradingPage'
+import OTCCombinedPage from '@/pages/otc/OTCCombinedPage'
+import OTCOfferDetailPage from '@/pages/otc/OTCOfferDetailPage'
+import OTCContractDetailPage from '@/pages/otc/OTCContractDetailPage'
+
+// ── Celina 4 – Fondovi ────────────────────────────────────────────────────────
+import FundsDiscoveryPage from '@/pages/funds/FundsDiscoveryPage'
+import FundDetailPage from '@/pages/funds/FundDetailPage'
+import CreateFundPage from '@/pages/funds/CreateFundPage'
+import FundInvestPage from '@/pages/funds/FundInvestPage'
+
+// ── Celina 4 – Banka ─────────────────────────────────────────────────────────
+import ActuaryPerformancePage from '@/pages/bank/ActuaryPerformancePage'
+import BankFundPositionsPage from '@/pages/bank/BankFundPositionsPage'
+
+import AllowedRolesRoute from '@/router/AllowedRolesRoute'
+
 function RedirectClientHartijeToCanonical() {
   return <Navigate to="/hartije" replace />
 }
@@ -132,6 +150,62 @@ const router = createBrowserRouter(
 
           {/* Portfolio – klijenti i aktuari */}
           <Route path="/portfolio" element={<PortfolioRoute />} />
+
+          {/* ── Celina 4 – OTC ──────────────────────────────────────────── */}
+          <Route path="/otc/trade" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+              <OTCTradingPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/otc" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+              <OTCCombinedPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/otc/offers/:id" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+              <OTCOfferDetailPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/otc/contracts/:id" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+              <OTCContractDetailPage />
+            </AllowedRolesRoute>
+          } />
+
+          {/* ── Celina 4 – Fondovi ────────────────────────────────────── */}
+          <Route path="/funds" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <FundsDiscoveryPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/funds/create" element={
+            <AllowedRolesRoute allowedRoles={['SUPERVISOR']}>
+              <CreateFundPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/funds/:id" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <FundDetailPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/funds/:id/invest" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+              <FundInvestPage />
+            </AllowedRolesRoute>
+          } />
+
+          {/* ── Celina 4 – Profit banke ──────────────────────────────── */}
+          <Route path="/bank/actuary-performance" element={
+            <AllowedRolesRoute allowedRoles={['SUPERVISOR']}>
+              <ActuaryPerformancePage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/bank/fund-positions" element={
+            <AllowedRolesRoute allowedRoles={['SUPERVISOR']}>
+              <BankFundPositionsPage />
+            </AllowedRolesRoute>
+          } />
 
           {/* Client home */}
           <Route path="/client" element={<PrivateRoute requiredRole="CLIENT" />}>

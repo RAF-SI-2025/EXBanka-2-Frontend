@@ -21,14 +21,19 @@ import {
   ListOrdered,
   ShieldCheck,
   Receipt,
+  Handshake,
+  PieChart,
+  Wallet,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
+import UnreadOffersBadge from '@/components/shared/UnreadOffersBadge'
 
 interface NavItem {
   label: string
   to: string
   icon?: React.ReactNode
+  badge?: React.ReactNode
   roles: string[]
   /** Show item only if user has ANY of these permissions */
   permission?: string | string[]
@@ -187,6 +192,32 @@ const NAV_ITEMS: NavItem[] = [
     employeeNeedsActuary: true,
   },
 
+  // ── Celina 4 – EMPLOYEE ───────────────────────────────────────────────
+  {
+    label: 'OTC Trgovina',
+    to: '/otc/trade',
+    icon: <Handshake className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR'],
+    end: true,
+  },
+  {
+    label: 'OTC Ponude i Ugovori',
+    to: '/otc',
+    icon: <FileText className="h-5 w-5" />,
+    badge: <UnreadOffersBadge />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR'],
+    end: true,
+  },
+  {
+    label: 'Fondovi',
+    to: '/funds',
+    icon: <PieChart className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    end: true,
+  },
+
   // ── Client (text-only, no icons per spec) ──────────────────────────────
   { label: 'Početna',    to: '/client',                                    roles: ['CLIENT'] },
   { label: 'Računi',     to: '/client/accounts',                           roles: ['CLIENT'] },
@@ -195,9 +226,19 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Kartice',    to: '/client/cards',                              roles: ['CLIENT'] },
   { label: 'Krediti',    to: '/client/credits',                            roles: ['CLIENT'] },
   { label: 'Berze',      to: '/client/exchanges',                          roles: ['CLIENT'] },
-  { label: 'Hartije od vrednosti', to: '/hartije',          roles: ['CLIENT'], end: true },
+  { label: 'Hartije od vrednosti', to: '/hartije',           roles: ['CLIENT'], end: true },
   { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'], permission: 'TRADE_STOCKS' },
   { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
+  // ── Celina 4 – CLIENT ─────────────────────────────────────────────────
+  { label: 'OTC Trgovina',          to: '/otc/trade', roles: ['CLIENT'], end: true },
+  {
+    label: 'OTC Ponude i Ugovori',
+    to: '/otc',
+    badge: <UnreadOffersBadge />,
+    roles: ['CLIENT'],
+    end: true,
+  },
+  { label: 'Fondovi', to: '/funds', roles: ['CLIENT'], end: true },
 ]
 
 const PAYMENT_SUB_ITEMS = [
@@ -205,6 +246,11 @@ const PAYMENT_SUB_ITEMS = [
   { label: 'Prenos',             to: '/client/payments/transfer',   icon: <ArrowLeftRight className="h-4 w-4" /> },
   { label: 'Primaoci plaćanja',  to: '/client/payments/recipients', icon: <UserCheck className="h-4 w-4" /> },
   { label: 'Pregled plaćanja',   to: '/client/payments/history',    icon: <ClipboardList className="h-4 w-4" /> },
+]
+
+const PROFIT_BANKE_SUB_ITEMS = [
+  { label: 'Profit aktuara',       to: '/bank/actuary-performance', icon: <BarChart2 className="h-4 w-4" /> },
+  { label: 'Pozicije u fondovima', to: '/bank/fund-positions',      icon: <Building2 className="h-4 w-4" /> },
 ]
 
 interface SidebarProps {
@@ -218,9 +264,12 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation()
 
   const isClient = user?.userType === 'CLIENT'
+  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
   const isOnPayments = location.pathname.startsWith('/client/payments')
+  const isOnProfitBanke = location.pathname.startsWith('/bank/')
 
   const [paymentOpen, setPaymentOpen] = useState(isOnPayments)
+  const [profitBankeOpen, setProfitBankeOpen] = useState(isOnProfitBanke)
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!user?.userType || !item.roles.includes(user.userType)) return false
@@ -300,7 +349,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
               }
             >
               {item.icon && item.icon}
-              {item.label}
+              <span className="flex-1">{item.label}</span>
+              {item.badge && item.badge}
             </NavLink>
           ))}
 
@@ -335,6 +385,52 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
                       className={({ isActive }) =>
                         [
                           'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary-700 text-white'
+                            : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+                        ].join(' ')
+                      }
+                    >
+                      {sub.icon}
+                      {sub.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── Profit banke collapsible submenu (SUPERVISOR only) ── */}
+          {isSupervisor && (
+            <div>
+              <button
+                onClick={() => setProfitBankeOpen((v) => !v)}
+                className={[
+                  'w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isOnProfitBanke
+                    ? 'bg-primary-700 text-white'
+                    : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-3">
+                  <Wallet className="h-5 w-5" />
+                  Profit banke
+                </div>
+                {profitBankeOpen
+                  ? <ChevronDown className="h-4 w-4" />
+                  : <ChevronRight className="h-4 w-4" />}
+              </button>
+
+              {profitBankeOpen && (
+                <div className="mt-1 space-y-0.5 pl-3">
+                  {PROFIT_BANKE_SUB_ITEMS.map((sub) => (
+                    <NavLink
+                      key={sub.to}
+                      to={sub.to}
+                      onClick={onMobileClose}
+                      className={({ isActive }) =>
+                        [
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                           isActive
                             ? 'bg-primary-700 text-white'
                             : 'text-primary-300 hover:bg-primary-800 hover:text-white',
