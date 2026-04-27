@@ -6,7 +6,6 @@ interface FormState {
   name: string
   description: string
   minimumContribution: string
-  managerId: string
 }
 
 interface CreateFundFormProps {
@@ -16,14 +15,12 @@ interface CreateFundFormProps {
 const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
 
 export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
-  const { user } = useAuthStore()
   const createFund = useCelina4Store(s => s.createFund)
 
   const [form, setForm] = useState<FormState>({
     name: '',
     description: '',
     minimumContribution: '',
-    managerId: user?.id ?? '',
   })
   const [nameError, setNameError] = useState<string | null>(null)
   const [nameChecking, setNameChecking] = useState(false)
@@ -45,12 +42,13 @@ export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
     setNameError(null)
     try {
       const { accessToken } = useAuthStore.getState()
-      const res = await fetch(`${API_BASE}/api/funds?name=${encodeURIComponent(name)}`, {
+      const res = await fetch(`${API_BASE}/funds/?search=${encodeURIComponent(name)}`, {
         signal: nameCheckAbort.current.signal,
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       })
       const data = await res.json()
-      if (Array.isArray(data) && data.some((f: { name: string }) => f.name.toLowerCase() === name.toLowerCase())) {
+      const list: { name: string }[] = Array.isArray(data?.funds) ? data.funds : []
+      if (list.some(f => f.name.toLowerCase() === name.toLowerCase())) {
         setNameError('Fond sa ovim imenom već postoji.')
       }
     } catch {
@@ -66,7 +64,6 @@ export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
     if (!form.description.trim()) errs.description = 'Opis je obavezan.'
     const min = parseFloat(form.minimumContribution)
     if (isNaN(min) || min <= 0) errs.minimumContribution = 'Minimalna uplata mora biti pozitivan broj.'
-    if (!form.managerId.trim()) errs.managerId = 'ID menadžera je obavezan.'
     setErrors(errs)
     return Object.keys(errs).length === 0 && !nameError
   }
@@ -80,7 +77,6 @@ export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
         name: form.name.trim(),
         description: form.description.trim(),
         minimumContribution: parseFloat(form.minimumContribution),
-        managerId: form.managerId.trim(),
       })
       onSuccess?.()
     } finally {
@@ -141,20 +137,6 @@ export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
           }`}
         />
         {errors.minimumContribution && <p className="mt-1 text-xs text-red-600">{errors.minimumContribution}</p>}
-      </div>
-
-      {/* Manager ID */}
-      <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700">ID menadžera *</label>
-        <input
-          type="text"
-          value={form.managerId}
-          onChange={e => handleChange('managerId', e.target.value)}
-          className={`w-full rounded-lg border px-3 py-2 text-sm focus:outline-none ${
-            errors.managerId ? 'border-red-400' : 'border-gray-300 focus:border-blue-500'
-          }`}
-        />
-        {errors.managerId && <p className="mt-1 text-xs text-red-600">{errors.managerId}</p>}
       </div>
 
       <button

@@ -79,7 +79,7 @@ interface Celina4State {
   // Fund Actions
   fetchFunds: (params?: { name?: string; sortBy?: string }) => Promise<void>
   fetchFundDetail: (id: string) => Promise<void>
-  createFund: (data: Pick<InvestmentFund, 'name' | 'description' | 'minimumContribution' | 'managerId'>) => Promise<void>
+  createFund: (data: Pick<InvestmentFund, 'name' | 'description' | 'minimumContribution'>) => Promise<void>
   investInFund: (id: string, amount: number, accountId: string) => Promise<void>
   redeemFromFund: (id: string, amount: number, accountId: string) => Promise<{ liquidation: boolean }>
   sellFundSecurity: (fundId: string, ticker: string) => Promise<void>
@@ -237,10 +237,10 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     set({ fundsLoading: true, fundsError: null })
     try {
       const qs = new URLSearchParams()
-      if (params?.name) qs.set('name', params.name)
+      if (params?.name) qs.set('search', params.name)
       if (params?.sortBy) qs.set('sortBy', params.sortBy)
-      const { data } = await apiFetch<InvestmentFund[]>(`/api/funds${qs.toString() ? `?${qs}` : ''}`)
-      set({ funds: data, fundsLoading: false })
+      const { data } = await apiFetch<{ funds: InvestmentFund[] }>(`/funds${qs.toString() ? `?${qs}` : ''}`)
+      set({ funds: data.funds ?? [], fundsLoading: false })
     } catch (e: unknown) {
       set({ fundsLoading: false, fundsError: String(e) })
     }
@@ -249,7 +249,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchFundDetail: async (id) => {
     set({ activeFundLoading: true })
     try {
-      const { data } = await apiFetch<InvestmentFund>(`/api/funds/${id}`)
+      const { data } = await apiFetch<InvestmentFund>(`/funds/${id}`)
       set({ activeFund: data, activeFundLoading: false })
     } catch {
       set({ activeFundLoading: false })
@@ -259,7 +259,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   createFund: async (data) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      const { data: created } = await apiFetch<InvestmentFund>('/api/funds', {
+      const { data: created } = await apiFetch<InvestmentFund>('/funds', {
         method: 'POST',
         body: JSON.stringify(data),
       })
@@ -274,7 +274,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   investInFund: async (id, amount, accountId) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/api/funds/${id}/invest`, {
+      await apiFetch(`/funds/${id}/invest`, {
         method: 'POST',
         body: JSON.stringify({ amount, accountId }),
       })
@@ -290,7 +290,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     const { accessToken } = useAuthStore.getState()
     try {
-      const res = await fetch(`${API_BASE}/api/funds/${id}/redeem`, {
+      const res = await fetch(`${API_BASE}/funds/${id}/redeem`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
         body: JSON.stringify({ amount, accountId }),
@@ -322,7 +322,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   sellFundSecurity: async (fundId, ticker) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/api/funds/${fundId}/sell/${ticker}`, { method: 'POST' })
+      await apiFetch(`/funds/${fundId}/sell/${ticker}`, { method: 'POST' })
       set({ sagaStatus: 'success', sagaStatusMessage: `Hartija ${ticker} je prodata.` })
       await get().fetchFundDetail(fundId)
     } catch (e: unknown) {
@@ -334,7 +334,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchMyPositions: async () => {
     set({ myPositionsLoading: true })
     try {
-      const { data } = await apiFetch<ClientFundPosition[]>('/api/funds/my-positions')
+      const { data } = await apiFetch<ClientFundPosition[]>('/funds/my-positions')
       set({ myFundPositions: data, myPositionsLoading: false })
     } catch {
       set({ myPositionsLoading: false })
@@ -344,7 +344,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchFundPerformance: async (id, period) => {
     set({ performanceLoading: true })
     try {
-      const { data } = await apiFetch<FundPerformancePoint[]>(`/api/funds/${id}/performance?period=${period}`)
+      const { data } = await apiFetch<FundPerformancePoint[]>(`/funds/${id}/performance?period=${period}`)
       set({ performanceData: data, performanceLoading: false })
     } catch {
       set({ performanceLoading: false })

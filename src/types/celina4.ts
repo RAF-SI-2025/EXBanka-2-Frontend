@@ -70,9 +70,9 @@ export interface InvestmentFund {
   managerId: string
   managerName: string
   liquidAssets: number
-  fundValue: number | null
+  fundValueRsd: number | null
   profit: number | null
-  accountNumber: string
+  accountId: string
   securities: FundSecurity[]
   positions: ClientFundPosition[]
   createdAt: string

@@ -31,7 +31,7 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
       <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
         <div>
           <dt className="text-gray-500">Vrednost fonda</dt>
-          <dd className="font-medium text-gray-900">{fmtRSD(fund.fundValue)}</dd>
+          <dd className="font-medium text-gray-900">{fmtRSD(fund.fundValueRsd)}</dd>
         </div>
         <div>
           <dt className="text-gray-500">Profit</dt>

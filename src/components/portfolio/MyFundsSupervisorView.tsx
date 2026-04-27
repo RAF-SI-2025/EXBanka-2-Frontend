@@ -42,7 +42,7 @@ export default function MyFundsSupervisorView({ funds, onViewDetail }: MyFundsSu
                 <p className="font-semibold text-gray-900">{fund.name}</p>
                 <p className="text-xs text-gray-500 line-clamp-1">{fund.description}</p>
               </td>
-              <td className="px-4 py-3 text-gray-700">{fmtRSD(fund.fundValue)}</td>
+              <td className="px-4 py-3 text-gray-700">{fmtRSD(fund.fundValueRsd)}</td>
               <td className={`px-4 py-3 font-semibold ${fund.profit !== null && fund.profit > 0 ? 'text-green-600' : 'text-red-600'}`}>
                 {fmtRSD(fund.profit)}
               </td>

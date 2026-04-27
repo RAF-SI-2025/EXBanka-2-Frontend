@@ -33,7 +33,7 @@ export default function FundDetailView({ fund, userRole, bankAccounts = [], clie
   }
 
   async function handleRedeem(amount: number, accountId: string) {
-    await redeemFromFund(fund.id, amount === -1 ? fund.fundValue ?? 0 : amount, accountId)
+    await redeemFromFund(fund.id, amount === -1 ? fund.fundValueRsd ?? 0 : amount, accountId)
     setInvestModal(null)
   }
 
@@ -68,7 +68,7 @@ export default function FundDetailView({ fund, userRole, bankAccounts = [], clie
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         {[
-          { label: 'Vrednost fonda', value: fmtRSD(fund.fundValue) },
+          { label: 'Vrednost fonda', value: fmtRSD(fund.fundValueRsd) },
           { label: 'Profit', value: fmtRSD(fund.profit), positive: fund.profit !== null && fund.profit > 0 },
           { label: 'Likvidna sredstva', value: fmtRSD(fund.liquidAssets) },
           { label: 'Min. uplata', value: fmtRSD(fund.minimumContribution) },
@@ -87,7 +87,7 @@ export default function FundDetailView({ fund, userRole, bankAccounts = [], clie
         <span className="text-gray-500">Menadžer: </span>
         <span className="font-medium text-gray-900">{fund.managerName}</span>
         <span className="ml-4 text-gray-500">Br. računa: </span>
-        <span className="font-mono text-gray-900">{fund.accountNumber}</span>
+        <span className="font-mono text-gray-900">{fund.accountId}</span>
       </div>
 
       {/* Performance chart */}
