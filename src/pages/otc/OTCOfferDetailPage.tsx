@@ -63,7 +63,7 @@ export default function OTCOfferDetailPage() {
         offer={activeOffer}
         isLoading={isLoading}
         onSubmit={data => id && counterOffer(id, data)}
-        onAccept={() => id && acceptOffer(id)}
+        onAccept={(sellerAccountId) => id && acceptOffer(id, sellerAccountId)}
         onReject={() => id && rejectOffer(id)}
       />
 

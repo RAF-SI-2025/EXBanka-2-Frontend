@@ -182,6 +182,23 @@ export async function getClientAccounts(): Promise<AccountListItem[]> {
   }))
 }
 
+// ─── GetBankAccounts (RSD računi banke — vlasnik_id=2 / trezor) ──────────────
+// Koriste supervizori i admini za "investiranje u ime banke" i kupovinu hartija u ime banke.
+export async function getBankAccounts(): Promise<AccountListItem[]> {
+  const res = await apiGet<{ accounts: BackendAccountListItem[] | null }>('/bank/bank-accounts')
+  return (res.accounts ?? []).map((a) => ({
+    id:                   String(a.id),
+    broj_racuna:          a.brojRacuna,
+    naziv_racuna:         a.nazivRacuna,
+    kategorija_racuna:    'TEKUCI',
+    vrsta_racuna:         'POSLOVNI',
+    valuta_oznaka:        a.valutaOznaka,
+    stanje_racuna:        parseNum(a.stanjeRacuna),
+    rezervisana_sredstva: parseNum(a.rezervisanaSredstva),
+    raspolozivo_stanje:   parseNum(a.raspolozivoStanje),
+  }))
+}
+
 /** Kreiranje naloga za hartiju — backend proverava raspoloživo stanje (ne knjiži punu trgovinu). */
 export async function createListingOrder(payload: {
   accountId: string | number

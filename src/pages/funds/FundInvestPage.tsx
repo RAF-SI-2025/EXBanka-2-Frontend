@@ -3,15 +3,16 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useCelina4Store } from '@/store/useCelina4Store'
 import SAGAStatusToast from '@/components/shared/SAGAStatusToast'
+import { getClientAccounts, getBankAccounts } from '@/services/bankaService'
 import type { AccountListItem } from '@/types'
-
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
 
 export default function FundInvestPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { accessToken } = useAuthStore()
+  const { user, hasPermission } = useAuthStore()
   const { activeFund, fetchFundDetail, investInFund } = useCelina4Store()
+
+  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
 
   const [accounts, setAccounts] = useState<AccountListItem[]>([])
   const [accountsLoading, setAccountsLoading] = useState(true)
@@ -24,18 +25,17 @@ export default function FundInvestPage() {
     if (!id) return
     fetchFundDetail(id)
     setAccountsLoading(true)
-    fetch(`${API_BASE}/api/client/accounts`, {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-    })
-      .then(r => r.json())
-      .then(data => {
-        const list: AccountListItem[] = Array.isArray(data) ? data : []
-        setAccounts(list)
-        if (list.length > 0) setAccountId(list[0].id)
+    const loader = isSupervisor ? getBankAccounts() : getClientAccounts()
+    loader
+      .then(list => {
+        // Fond ima RSD račun — može se uplaćivati samo iz RSD računa.
+        const rsd = list.filter(a => a.valuta_oznaka === 'RSD')
+        setAccounts(rsd)
+        if (rsd.length > 0) setAccountId(rsd[0].id)
       })
-      .catch(() => {})
+      .catch(() => setAccounts([]))
       .finally(() => setAccountsLoading(false))
-  }, [id, fetchFundDetail, accessToken])
+  }, [id, fetchFundDetail, isSupervisor])
 
   const fund = activeFund
   const numAmount = parseFloat(amount) || 0

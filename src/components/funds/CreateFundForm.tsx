@@ -12,7 +12,8 @@ interface CreateFundFormProps {
   onSuccess?: () => void
 }
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const RAW_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
   const createFund = useCelina4Store(s => s.createFund)
@@ -42,7 +43,7 @@ export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {
     setNameError(null)
     try {
       const { accessToken } = useAuthStore.getState()
-      const res = await fetch(`${API_BASE}/funds/?search=${encodeURIComponent(name)}`, {
+      const res = await fetch(`${API_BASE}/api/bank/investment-funds?search=${encodeURIComponent(name)}`, {
         signal: nameCheckAbort.current.signal,
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
       })

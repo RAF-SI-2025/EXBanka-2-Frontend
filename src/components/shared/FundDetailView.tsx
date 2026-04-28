@@ -85,9 +85,9 @@ export default function FundDetailView({ fund, userRole, bankAccounts = [], clie
       {/* Manager info */}
       <div className="rounded-xl border border-gray-100 bg-gray-50 px-4 py-3 text-sm">
         <span className="text-gray-500">Menadžer: </span>
-        <span className="font-medium text-gray-900">{fund.managerName}</span>
+        <span className="font-medium text-gray-900">{fund.managerName || '—'}</span>
         <span className="ml-4 text-gray-500">Br. računa: </span>
-        <span className="font-mono text-gray-900">{fund.accountId}</span>
+        <span className="font-mono text-gray-900">{fund.accountNumber || '—'}</span>
       </div>
 
       {/* Performance chart */}

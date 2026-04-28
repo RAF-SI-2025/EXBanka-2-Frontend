@@ -19,6 +19,9 @@ export interface OTCOffer {
   buyerId: string
   sellerId: string
   status: 'ACTIVE' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED'
+  // Backend Faza 2: računi za isplatu/prijem premije.
+  buyerAccountId?: number
+  sellerAccountId?: number | null
 }
 
 export interface PartyInfo {
@@ -73,6 +76,7 @@ export interface InvestmentFund {
   fundValueRsd: number | null
   profit: number | null
   accountId: string
+  accountNumber: string
   securities: FundSecurity[]
   positions: ClientFundPosition[]
   createdAt: string

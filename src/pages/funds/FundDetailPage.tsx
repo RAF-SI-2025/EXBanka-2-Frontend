@@ -4,17 +4,17 @@ import { useAuthStore } from '@/store/authStore'
 import { useCelina4Store } from '@/store/useCelina4Store'
 import FundDetailView from '@/components/shared/FundDetailView'
 import SAGAStatusToast from '@/components/shared/SAGAStatusToast'
+import { getBankAccounts, getClientAccounts } from '@/services/bankaService'
 import type { C4UserRole } from '@/types/celina4'
 import type { AccountListItem } from '@/types'
-
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
 
 export default function FundDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { user, hasPermission, accessToken } = useAuthStore()
+  const { user, hasPermission } = useAuthStore()
   const { activeFund, activeFundLoading, fetchFundDetail } = useCelina4Store()
   const [bankAccounts, setBankAccounts] = useState<AccountListItem[]>([])
+  const [clientAccounts, setClientAccounts] = useState<AccountListItem[]>([])
 
   const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
   const isClient = user?.userType === 'CLIENT'
@@ -27,14 +27,16 @@ export default function FundDetailPage() {
   }, [id, fetchFundDetail])
 
   useEffect(() => {
-    if (!isSupervisor) return
-    fetch(`${API_BASE}/api/bank/accounts`, {
-      headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
-    })
-      .then(r => r.json())
-      .then(data => setBankAccounts(Array.isArray(data) ? data : []))
-      .catch(() => {})
-  }, [isSupervisor, accessToken])
+    if (isSupervisor) {
+      getBankAccounts()
+        .then(list => setBankAccounts(list.filter(a => a.valuta_oznaka === 'RSD')))
+        .catch(() => setBankAccounts([]))
+    } else if (isClient) {
+      getClientAccounts()
+        .then(list => setClientAccounts(list.filter(a => a.valuta_oznaka === 'RSD')))
+        .catch(() => setClientAccounts([]))
+    }
+  }, [isSupervisor, isClient])
 
   if (activeFundLoading || !activeFund) {
     return (
@@ -58,6 +60,7 @@ export default function FundDetailPage() {
         fund={activeFund}
         userRole={userRole}
         bankAccounts={bankAccounts}
+        clientAccounts={clientAccounts}
       />
 
       <SAGAStatusToast />

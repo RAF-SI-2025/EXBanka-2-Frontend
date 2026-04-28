@@ -129,6 +129,44 @@ export async function createTradingOrder(
   return mapOrder(res.order)
 }
 
+// ─── CreateFundOrder (supervizor kupuje hartije u ime fonda) ──────────────────
+
+export interface FundOrderRequest {
+  fundId: string | number
+  listingId: string | number
+  orderType: 'MARKET' | 'LIMIT' | 'STOP' | 'STOP_LIMIT'
+  quantity: number
+  contractSize: number
+  pricePerUnit?: string
+  stopPrice?: string
+  afterHours?: boolean
+  allOrNone?: boolean
+}
+
+export interface FundOrderResponse {
+  order_id: string
+  fund_id: string
+  status: string
+  direction: string
+  quantity: number
+  message: string
+}
+
+export async function createFundOrder(req: FundOrderRequest): Promise<FundOrderResponse> {
+  const body = {
+    fund_id:        Number(req.fundId),
+    listing_id:     Number(req.listingId),
+    order_type:     req.orderType,
+    quantity:       req.quantity,
+    contract_size:  req.contractSize,
+    price_per_unit: req.pricePerUnit ?? null,
+    stop_price:     req.stopPrice ?? null,
+    after_hours:    req.afterHours ?? false,
+    all_or_none:    req.allOrNone ?? false,
+  }
+  return apiPost<typeof body, FundOrderResponse>('/bank/investment-funds/orders', body)
+}
+
 // ─── TradingListOrders ────────────────────────────────────────────────────────
 
 /** Lists ALL orders (supervisor/admin dashboard). Pass a status to filter. */

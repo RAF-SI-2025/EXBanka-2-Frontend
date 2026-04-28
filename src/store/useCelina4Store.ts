@@ -9,9 +9,72 @@ import type {
   FundPerformancePoint,
 } from '@/types/celina4'
 
+// ─── Adapter: backend OTC offer DTO → frontend OTCOffer shape ────────────────
+// Backend vraća flat polja (ticker, stockName, exchange, status PENDING/...) i
+// numeričke ID-jeve. Frontend tipovi koriste nested { stock: {...} } i statuse
+// ACTIVE/ACCEPTED/REJECTED/EXPIRED — ovaj helper preslikava bez razbijanja
+// postojećih komponenti.
+interface BackendOfferDTO {
+  id: number
+  listingId: number
+  ticker?: string
+  stockName?: string
+  exchange?: string
+  sellerId: number | string
+  buyerId: number | string
+  buyerAccountId: number
+  sellerAccountId?: number | null
+  amount: number
+  pricePerStock: number
+  premium: number
+  settlementDate: string
+  status: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'DEACTIVATED'
+  lastModified: string
+  modifiedBy: number | string
+  marketPriceUsd?: number
+}
+
+function adaptOffer(b: BackendOfferDTO): OTCOffer & {
+  buyerAccountId?: number
+  sellerAccountId?: number | null
+} {
+  const statusMap: Record<BackendOfferDTO['status'], OTCOffer['status']> = {
+    PENDING: 'ACTIVE',
+    ACCEPTED: 'ACCEPTED',
+    REJECTED: 'REJECTED',
+    DEACTIVATED: 'EXPIRED',
+  }
+  return {
+    id: String(b.id),
+    stock: {
+      ticker: b.ticker ?? '',
+      name: b.stockName ?? b.ticker ?? '',
+      exchange: b.exchange ?? '',
+      lastKnownMarketPrice: b.marketPriceUsd,
+    },
+    amount: b.amount,
+    pricePerStock: b.pricePerStock,
+    premium: b.premium,
+    settlementDate: b.settlementDate,
+    lastModified: b.lastModified,
+    modifiedBy: String(b.modifiedBy),
+    buyerId: String(b.buyerId),
+    sellerId: String(b.sellerId),
+    status: statusMap[b.status] ?? 'EXPIRED',
+    buyerAccountId: b.buyerAccountId,
+    sellerAccountId: b.sellerAccountId ?? null,
+  }
+}
+
 export type SagaStatus = 'idle' | 'pending' | 'success' | 'failure'
 
-const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+// API_BASE: dev koristi vite proxy koji hvata /api/*, prod-nginx isto.
+// Path-evi u ovom store-u već uključuju "/api/" — ako je VITE_API_BASE_URL
+// postavljen na "/api", "${API_BASE}/api/..." bi se poklapao u "/api/api/..."
+// (što vraća 404 jer pada na catch-all proxy ka user-service-u). Zato koristimo
+// API_BASE samo kad je eksplicitno postavljen na nešto što NE završava sa "/api".
+const RAW_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 function authHeaders(): Record<string, string> {
   const { accessToken } = useAuthStore.getState()
@@ -69,8 +132,8 @@ interface Celina4State {
   // OTC Actions
   fetchOffers: () => Promise<void>
   fetchOfferDetail: (id: string) => Promise<void>
-  counterOffer: (id: string, data: Partial<Pick<OTCOffer, 'amount' | 'pricePerStock' | 'premium' | 'settlementDate'>>) => Promise<void>
-  acceptOffer: (id: string) => Promise<void>
+  counterOffer: (id: string, data: Partial<Pick<OTCOffer, 'amount' | 'pricePerStock' | 'premium' | 'settlementDate'>> & { sellerAccountId?: number }) => Promise<void>
+  acceptOffer: (id: string, sellerAccountId?: number) => Promise<void>
   rejectOffer: (id: string) => Promise<void>
   markOfferRead: (id: string) => Promise<void>
   fetchContracts: () => Promise<void>
@@ -123,11 +186,12 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchOffers: async () => {
     set({ offersLoading: true, offersError: null })
     try {
-      const { data: offers } = await apiFetch<OTCOffer[]>('/api/otc/offers')
+      const { data: raw } = await apiFetch<BackendOfferDTO[]>('/api/otc/offers')
+      const offers = (raw ?? []).map(adaptOffer)
       const { user } = useAuthStore.getState()
       const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
       const unreadCount = offers.filter(
-        o => o.lastModified > lastRead && o.modifiedBy !== user?.id
+        o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
       ).length
       set({ offers, offersLoading: false, unreadCount })
     } catch (e: unknown) {
@@ -138,8 +202,8 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchOfferDetail: async (id) => {
     set({ activeOfferLoading: true })
     try {
-      const { data } = await apiFetch<OTCOffer>(`/api/otc/offers/${id}`)
-      set({ activeOffer: data, activeOfferLoading: false })
+      const { data } = await apiFetch<BackendOfferDTO>(`/api/otc/offers/${id}`)
+      set({ activeOffer: adaptOffer(data), activeOfferLoading: false })
     } catch {
       set({ activeOfferLoading: false })
     }
@@ -148,21 +212,39 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   counterOffer: async (id, data) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/api/otc/offers/${id}/counter`, { method: 'POST', body: JSON.stringify(data) })
+      // Backend očekuje YYYY-MM-DD za settlementDate.
+      const body = {
+        amount: data.amount,
+        pricePerStock: data.pricePerStock,
+        premium: data.premium,
+        settlementDate: (data.settlementDate ?? '').slice(0, 10),
+        ...(data as { sellerAccountId?: number }).sellerAccountId !== undefined
+          ? { sellerAccountId: (data as { sellerAccountId?: number }).sellerAccountId }
+          : {},
+      }
+      await apiFetch(`/api/otc/offers/${id}/counter`, { method: 'PATCH', body: JSON.stringify(body) })
       set({ sagaStatus: 'success', sagaStatusMessage: 'Kontraponuda je poslata.' })
       await get().fetchOffers()
+      await get().fetchOfferDetail(id)
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
       set({ sagaStatus: 'failure', sagaStatusMessage: msg })
     }
   },
 
-  acceptOffer: async (id) => {
+  acceptOffer: async (id, sellerAccountId) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/api/otc/offers/${id}/accept`, { method: 'POST' })
-      set({ sagaStatus: 'success', sagaStatusMessage: 'Ponuda je prihvaćena.' })
+      const body = sellerAccountId !== undefined && sellerAccountId !== null
+        ? JSON.stringify({ sellerAccountId })
+        : undefined
+      await apiFetch(`/api/otc/offers/${id}/accept`, {
+        method: 'PATCH',
+        ...(body ? { body } : {}),
+      })
+      set({ sagaStatus: 'success', sagaStatusMessage: 'Ponuda je prihvaćena. Ugovor je kreiran i premija je isplaćena.' })
       await get().fetchOffers()
+      await get().fetchContracts()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
       set({ sagaStatus: 'failure', sagaStatusMessage: msg })
@@ -172,8 +254,10 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   rejectOffer: async (id) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/api/otc/offers/${id}/reject`, { method: 'POST' })
-      set({ sagaStatus: 'success', sagaStatusMessage: 'Ponuda je odbijena.' })
+      // Backend: PATCH /decline pokriva i odbijanje (REJECTED) i povlačenje
+      // (DEACTIVATED) — odluka se donosi po modified_by vs caller.
+      await apiFetch(`/api/otc/offers/${id}/decline`, { method: 'PATCH' })
+      set({ sagaStatus: 'success', sagaStatusMessage: 'Ponuda je odbijena/povučena.' })
       await get().fetchOffers()
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
@@ -181,20 +265,17 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     }
   },
 
-  markOfferRead: async (id) => {
-    try {
-      await apiFetch(`/api/otc/offers/${id}/read`, { method: 'PATCH' })
-      localStorage.setItem('lastOtcReadTimestamp', new Date().toISOString())
-      const { offers } = get()
-      const { user } = useAuthStore.getState()
-      const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
-      const unreadCount = offers.filter(
-        o => o.lastModified > lastRead && o.modifiedBy !== user?.id
-      ).length
-      set({ unreadCount })
-    } catch {
-      // non-critical
-    }
+  markOfferRead: async () => {
+    // Backend ne čuva lastEntranceTimestamp — koristimo samo lokalni timestamp
+    // za "Discord-style" needsReview indikator.
+    localStorage.setItem('lastOtcReadTimestamp', new Date().toISOString())
+    const { offers } = get()
+    const { user } = useAuthStore.getState()
+    const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
+    const unreadCount = offers.filter(
+      o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
+    ).length
+    set({ unreadCount })
   },
 
   // ── OTC Contracts ─────────────────────────────────────────────────────────
@@ -239,7 +320,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
       const qs = new URLSearchParams()
       if (params?.name) qs.set('search', params.name)
       if (params?.sortBy) qs.set('sortBy', params.sortBy)
-      const { data } = await apiFetch<{ funds: InvestmentFund[] }>(`/funds${qs.toString() ? `?${qs}` : ''}`)
+      const { data } = await apiFetch<{ funds: InvestmentFund[] }>(`/api/bank/investment-funds${qs.toString() ? `?${qs}` : ''}`)
       set({ funds: data.funds ?? [], fundsLoading: false })
     } catch (e: unknown) {
       set({ fundsLoading: false, fundsError: String(e) })
@@ -249,7 +330,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchFundDetail: async (id) => {
     set({ activeFundLoading: true })
     try {
-      const { data } = await apiFetch<InvestmentFund>(`/funds/${id}`)
+      const { data } = await apiFetch<InvestmentFund>(`/api/bank/investment-funds/${id}`)
       set({ activeFund: data, activeFundLoading: false })
     } catch {
       set({ activeFundLoading: false })
@@ -259,7 +340,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   createFund: async (data) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      const { data: created } = await apiFetch<InvestmentFund>('/funds', {
+      const { data: created } = await apiFetch<InvestmentFund>('/api/bank/investment-funds', {
         method: 'POST',
         body: JSON.stringify(data),
       })
@@ -274,7 +355,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   investInFund: async (id, amount, accountId) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/funds/${id}/invest`, {
+      await apiFetch(`/api/bank/funds/${id}/invest`, {
         method: 'POST',
         body: JSON.stringify({ amount, accountId }),
       })
@@ -290,7 +371,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     const { accessToken } = useAuthStore.getState()
     try {
-      const res = await fetch(`${API_BASE}/funds/${id}/redeem`, {
+      const res = await fetch(`${API_BASE}/api/bank/funds/${id}/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
         body: JSON.stringify({ amount, accountId }),
@@ -322,7 +403,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   sellFundSecurity: async (fundId, ticker) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
-      await apiFetch(`/funds/${fundId}/sell/${ticker}`, { method: 'POST' })
+      await apiFetch(`/api/bank/funds/${fundId}/sell/${ticker}`, { method: 'POST' })
       set({ sagaStatus: 'success', sagaStatusMessage: `Hartija ${ticker} je prodata.` })
       await get().fetchFundDetail(fundId)
     } catch (e: unknown) {
@@ -334,7 +415,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchMyPositions: async () => {
     set({ myPositionsLoading: true })
     try {
-      const { data } = await apiFetch<ClientFundPosition[]>('/funds/my-positions')
+      const { data } = await apiFetch<ClientFundPosition[]>('/api/bank/funds/my-positions')
       set({ myFundPositions: data, myPositionsLoading: false })
     } catch {
       set({ myPositionsLoading: false })
@@ -344,7 +425,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchFundPerformance: async (id, period) => {
     set({ performanceLoading: true })
     try {
-      const { data } = await apiFetch<FundPerformancePoint[]>(`/funds/${id}/performance?period=${period}`)
+      const { data } = await apiFetch<FundPerformancePoint[]>(`/api/bank/funds/${id}/performance?period=${period}`)
       set({ performanceData: data, performanceLoading: false })
     } catch {
       set({ performanceLoading: false })

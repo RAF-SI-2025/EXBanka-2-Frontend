@@ -20,13 +20,7 @@ export default defineConfig(({ mode }) => {
   server: {
     port: 3000,
         proxy: {
-      // 1. Fondovi (Specifična putanja za Bank Service)
-      '/api/funds': {
-        target: bankHttp,
-        changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api\/funds/, '/bank/investment-funds'),
-      },
-      // 2. Kartice (Bank Service)
+      // 1. Kartice (Bank Service)
       '/api/cards': {
         target: bankHttp,
         changeOrigin: true,
@@ -49,6 +43,19 @@ export default defineConfig(({ mode }) => {
         target: bankHttp,
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/bank/, '/bank'),
+      },
+      // 5a. Legacy alias za fondove (kompatibilnost sa starim frontend pozivima).
+      '/api/funds': {
+        target: bankHttp,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/funds/, '/bank/investment-funds'),
+      },
+      // 5b. OTC (Bank Service — Faza 2) — backend rute su /api/otc/* bez rewrite-a.
+      '/api/otc': {
+        target: bankHttp,
+        changeOrigin: true,
+        // Bez rewrite-a: backend httpMux registruje /api/otc/marketplace,
+        // /api/otc/offers, /api/otc/offers/{id}/{counter|accept|decline}.
       },
       // 6. CATCH-ALL za User Service (Mora biti poslednji!)
       '/api': {
