@@ -7,8 +7,8 @@ import path from 'path'
 // Docker (EXBanka-2-Infrastructure): user često 8082, bank 8083 — postavite oba u .env.local.
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '')
-  const userHttp = env.VITE_USER_HTTP_URL || 'http://127.0.0.1:8080'
-  const bankHttp = env.VITE_BANK_HTTP_URL || 'http://127.0.0.1:8082'
+  const userHttp = env.VITE_USER_HTTP_URL || 'http://127.0.0.1:8082'
+  const bankHttp = env.VITE_BANK_HTTP_URL || 'http://127.0.0.1:8083'
 
   return {
   plugins: [react()],
@@ -19,25 +19,45 @@ export default defineConfig(({ mode }) => {
   },
   server: {
     port: 3000,
-    proxy: {
+        proxy: {
+      // 1. Kartice (Bank Service)
+      '/api/cards': {
+        target: bankHttp,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/cards/, '/bank/cards'), // Uskladi sa backendom
+      },
+      // 3. Actuary (Bank Service - bez /bank prefiksa)
+      '/api/actuary': {
+        target: bankHttp,
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/actuary/, '/actuary'),
+      },
+      // 4. V1 rute (Bank Service)
+      '/api/v1': {
+        target: bankHttp,
+        changeOrigin: true,
+        // Ovde ne treba rewrite jer backend očekuje /api/v1
+      },
+      // 5. Sve ostalo što počinje sa /api/bank (Bank Service)
       '/api/bank': {
         target: bankHttp,
         changeOrigin: true,
         rewrite: (p) => p.replace(/^\/api\/bank/, '/bank'),
       },
-      '/api/actuary': {
+      // 5a. Legacy alias za fondove (kompatibilnost sa starim frontend pozivima).
+      '/api/funds': {
         target: bankHttp,
         changeOrigin: true,
-        rewrite: (p) => p.replace(/^\/api/, ''),
+        rewrite: (p) => p.replace(/^\/api\/funds/, '/bank/investment-funds'),
       },
-      '/api/v1': {
+      // 5b. OTC (Bank Service — Faza 2) — backend rute su /api/otc/* bez rewrite-a.
+      '/api/otc': {
         target: bankHttp,
         changeOrigin: true,
+        // Bez rewrite-a: backend httpMux registruje /api/otc/marketplace,
+        // /api/otc/offers, /api/otc/offers/{id}/{counter|accept|decline}.
       },
-      '/api/cards': {
-        target: bankHttp,
-        changeOrigin: true,
-      },
+      // 6. CATCH-ALL za User Service (Mora biti poslednji!)
       '/api': {
         target: userHttp,
         changeOrigin: true,

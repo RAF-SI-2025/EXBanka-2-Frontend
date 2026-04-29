@@ -7,8 +7,9 @@ import LoadingSpinner from '@/components/common/LoadingSpinner'
 import Dialog from '@/components/common/Dialog'
 import Button from '@/components/common/Button'
 import { hartijeListPath, hartijeDetailPath } from '@/router/helpers'
-import { getClientAccounts } from '@/services/bankaService'
-import { calculateOrder, createTradingOrder } from '@/services/tradingService'
+import { getClientAccounts, getBankAccounts } from '@/services/bankaService'
+import { calculateOrder, createTradingOrder, createFundOrder } from '@/services/tradingService'
+import { useCelina4Store } from '@/store/useCelina4Store'
 import { getClientCredits } from '@/services/kreditService'
 import { getAllExchanges } from '@/services/exchangeService'
 import { getMyPortfolio } from '@/services/portfolioService'
@@ -81,6 +82,17 @@ export default function CreateOrderPage() {
   const [loadingAccounts, setLoadingAccounts] = useState(true)
   const [accountId, setAccountId] = useState('')
 
+  // ── Supervisor BUY scope: kupovina za banku (sa konkretnog bankinog računa)
+  //    ili za fond (kojim supervizor upravlja). Aktivno samo na BUY direkciji,
+  //    non-forex hartiji, i samo za supervizore (isActuaryTrader && !isClient).
+  const [purchaseFor, setPurchaseFor] = useState<'BANK' | 'FUND'>('BANK')
+  const [bankAccounts, setBankAccounts] = useState<AccountListItem[]>([])
+  const [bankAccountId, setBankAccountId] = useState('')
+  const [fundId, setFundId] = useState('')
+  const supervisorUserId = user?.id ?? ''
+  const fundsFromStore = useCelina4Store(s => s.funds)
+  const fetchFunds = useCelina4Store(s => s.fetchFunds)
+
   // ── Calculation state ───────────────────────────────────────────────────────
   const [calc, setCalc] = useState<TradingCalculateResponse | null>(null)
   const [calcLoading, setCalcLoading] = useState(false)
@@ -119,6 +131,15 @@ export default function CreateOrderPage() {
       setAccountId('0')
       setAccounts([])
       setLoadingAccounts(false)
+      // Učitaj bank-RSD račune (za "Kupi za banku" sa konkretnim računom).
+      getBankAccounts()
+        .then(list => {
+          setBankAccounts(list)
+          if (list.length > 0) setBankAccountId(list[0].id)
+        })
+        .catch(() => setBankAccounts([]))
+      // Učitaj fondove kako bismo prikazali samo one kojima supervizor upravlja.
+      fetchFunds().catch(() => {})
       return
     }
     let cancelled = false
@@ -388,19 +409,39 @@ export default function CreateOrderPage() {
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await createTradingOrder({
-        accountId: isClient ? accountId : '0',
-        listingId: id,
-        orderType,
-        direction: side,
-        quantity: qty,
-        contractSize: selectedListing.contractSize,
-        pricePerUnit: needsLimitPrice(orderType) ? limitPrice : undefined,
-        stopPrice: needsStopPrice(orderType) ? stopPrice : undefined,
-        afterHours: false,
-        allOrNone,
-        margin,
-      })
+      // Supervizor + BUY + non-forex + scope=FUND → poseban endpoint za fond.
+      if (isActuaryTrader && !isClient && side === 'BUY' && !isForex && purchaseFor === 'FUND') {
+        if (!fundId) { setSubmitError('Izaberite fond.'); return }
+        await createFundOrder({
+          fundId,
+          listingId: id,
+          orderType,
+          quantity: qty,
+          contractSize: selectedListing.contractSize,
+          pricePerUnit: needsLimitPrice(orderType) ? limitPrice : undefined,
+          stopPrice: needsStopPrice(orderType) ? stopPrice : undefined,
+          afterHours: false,
+          allOrNone,
+        })
+      } else {
+        // Supervizor BUY non-forex sa "Za banku" + selektovanim računom: koristi bankAccountId.
+        const supervisorBankBuy =
+          isActuaryTrader && !isClient && side === 'BUY' && !isForex && purchaseFor === 'BANK' && bankAccountId
+        const finalAccountId = isClient ? accountId : (supervisorBankBuy ? bankAccountId : '0')
+        await createTradingOrder({
+          accountId: finalAccountId,
+          listingId: id,
+          orderType,
+          direction: side,
+          quantity: qty,
+          contractSize: selectedListing.contractSize,
+          pricePerUnit: needsLimitPrice(orderType) ? limitPrice : undefined,
+          stopPrice: needsStopPrice(orderType) ? stopPrice : undefined,
+          afterHours: false,
+          allOrNone,
+          margin,
+        })
+      }
       setSubmitted(true)
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : 'Nalog nije mogao biti kreiran.')
@@ -856,12 +897,99 @@ export default function CreateOrderPage() {
           </div>
         )}
         {isActuaryTrader && !isClient && (
-          <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
-            <span className="font-medium text-slate-800">{isForex ? 'Razmena:' : 'Naplata:'}</span>{' '}
-            {isForex
-              ? `trezor ${forexBase} / trezor ${forexQuote} — automatski odabir trezor računa banke pri izvršenju.`
-              : 'bankovni trezor (USD) — automatski odabir računa banke pri izvršenju naloga.'}
-          </div>
+          <>
+            {/* Supervizor BUY (non-forex): bira da li kupuje za banku ili za fond. */}
+            {side === 'BUY' && !isForex ? (
+              <div className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 p-3 text-sm">
+                <div>
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                    Kupovina za
+                  </p>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="purchaseFor"
+                        checked={purchaseFor === 'BANK'}
+                        onChange={() => setPurchaseFor('BANK')}
+                      />
+                      <span>Banku</span>
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="radio"
+                        name="purchaseFor"
+                        checked={purchaseFor === 'FUND'}
+                        onChange={() => setPurchaseFor('FUND')}
+                      />
+                      <span>Investicioni fond</span>
+                    </label>
+                  </div>
+                </div>
+
+                {purchaseFor === 'BANK' && (
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                      Bankov račun
+                    </label>
+                    {bankAccounts.length === 0 ? (
+                      <p className="text-amber-700">Nema dostupnih RSD računa banke.</p>
+                    ) : (
+                      <select
+                        value={bankAccountId}
+                        onChange={(e) => setBankAccountId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                      >
+                        {bankAccounts.map((a) => (
+                          <option key={a.id} value={a.id}>
+                            {a.broj_racuna} · {a.naziv_racuna} —{' '}
+                            {a.raspolozivo_stanje.toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} {a.valuta_oznaka}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+
+                {purchaseFor === 'FUND' && (() => {
+                  const myFunds = fundsFromStore.filter(f => String(f.managerId) === String(supervisorUserId))
+                  return (
+                    <div>
+                      <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500">
+                        Fond (samo fondovi kojima upravljate)
+                      </label>
+                      {myFunds.length === 0 ? (
+                        <p className="text-amber-700">Ne upravljate ni jednim fondom.</p>
+                      ) : (
+                        <select
+                          value={fundId}
+                          onChange={(e) => setFundId(e.target.value)}
+                          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                        >
+                          <option value="">— izaberite fond —</option>
+                          {myFunds.map(f => (
+                            <option key={f.id} value={f.id}>
+                              {f.name} — likvidno: {(f.liquidAssets ?? 0).toLocaleString('sr-RS', { maximumFractionDigits: 0 })} RSD
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                      <p className="mt-1 text-xs text-slate-500">
+                        Backend proverava da li fond ima dovoljno likvidnih sredstava za nalog.
+                      </p>
+                    </div>
+                  )
+                })()}
+              </div>
+            ) : (
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-700">
+                <span className="font-medium text-slate-800">{isForex ? 'Razmena:' : 'Naplata:'}</span>{' '}
+                {isForex
+                  ? `trezor ${forexBase} / trezor ${forexQuote} — automatski odabir trezor računa banke pri izvršenju.`
+                  : 'bankovni trezor (USD) — automatski odabir računa banke pri izvršenju naloga.'}
+              </div>
+            )}
+          </>
         )}
 
         {submitError && (
@@ -1058,7 +1186,7 @@ export default function CreateOrderPage() {
                   </div>
                 ) : null
               })()}
-            {isActuaryTrader && !isClient && (
+            {isActuaryTrader && !isClient && (isForex || purchaseFor === 'BANK') && (
               <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-900">
                 {isForex ? (
                   <>
@@ -1071,6 +1199,11 @@ export default function CreateOrderPage() {
                     backend.
                   </>
                 )}
+              </div>
+            )}
+            {isActuaryTrader && !isClient && !isForex && purchaseFor === 'FUND' && (
+              <div className="rounded-lg border border-primary-100 bg-primary-50 px-4 py-3 text-sm text-primary-900">
+                Naplata ide sa <strong>računa fonda</strong>.
               </div>
             )}
 
