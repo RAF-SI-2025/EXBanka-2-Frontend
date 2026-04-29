@@ -73,7 +73,7 @@ export type SagaStatus = 'idle' | 'pending' | 'success' | 'failure'
 // postavljen na "/api", "${API_BASE}/api/..." bi se poklapao u "/api/api/..."
 // (što vraća 404 jer pada na catch-all proxy ka user-service-u). Zato koristimo
 // API_BASE samo kad je eksplicitno postavljen na nešto što NE završava sa "/api".
-const RAW_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const RAW_BASE = (import.meta.env as Record<string, string | undefined>).VITE_API_BASE_URL ?? ''
 const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 function authHeaders(): Record<string, string> {

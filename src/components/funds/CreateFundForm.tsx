@@ -12,7 +12,7 @@ interface CreateFundFormProps {
   onSuccess?: () => void
 }
 
-const RAW_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const RAW_BASE = (import.meta.env as Record<string, string | undefined>).VITE_API_BASE_URL ?? ''
 const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 export default function CreateFundForm({ onSuccess }: CreateFundFormProps) {

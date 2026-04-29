@@ -43,7 +43,7 @@ const EMPTY_FORM: OfferForm = {
 
 // Path-evi u ovoj strani uključuju "/api/" prefiks; ako je VITE_API_BASE_URL
 // postavljen na "/api", uklanjamo ga iz baze da ne dobijemo "/api/api/...".
-const RAW_BASE = (import.meta as any).env?.VITE_API_BASE_URL ?? ''
+const RAW_BASE = (import.meta.env as Record<string, string | undefined>).VITE_API_BASE_URL ?? ''
 const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 export default function OTCTradingPage() {
