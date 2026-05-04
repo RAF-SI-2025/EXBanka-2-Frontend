@@ -32,6 +32,7 @@ interface BackendOfferDTO {
   lastModified: string
   modifiedBy: number | string
   marketPriceUsd?: number
+  needsReview?: boolean
 }
 
 function adaptOffer(b: BackendOfferDTO): OTCOffer & {
@@ -63,6 +64,58 @@ function adaptOffer(b: BackendOfferDTO): OTCOffer & {
     status: statusMap[b.status] ?? 'EXPIRED',
     buyerAccountId: b.buyerAccountId,
     sellerAccountId: b.sellerAccountId ?? null,
+    needsReview: b.needsReview ?? false,
+  }
+}
+
+// ─── Adapter: backend OTC contract DTO → frontend OTCContract shape ──────────
+// Backend vraća flat polja (ticker, stockName, exchange, currentPrice, sellerInfo
+// kao string). Frontend tipovi koriste nested { stock: {...}, sellerInfo: {...} }.
+interface BackendContractDTO {
+  id: number
+  offerId: number
+  listingId: number
+  ticker: string
+  stockName: string
+  exchange?: string
+  sellerId: number
+  buyerId: number
+  buyerAccountId: number
+  sellerAccountId: number
+  amount: number
+  strikePrice: number
+  premium: number
+  settlementDate: string
+  status: string
+  createdAt: string
+  exercisedAt?: string | null
+  currentPrice: number
+  profit: number
+  sellerInfo: string
+  sellerName: string
+  sellerBankName: string
+}
+
+function adaptContract(b: BackendContractDTO): OTCContract {
+  return {
+    id: String(b.id),
+    offerId: String(b.offerId),
+    stock: {
+      ticker: b.ticker ?? '',
+      name: b.stockName ?? '',
+      exchange: b.exchange ?? '',
+      lastKnownMarketPrice: b.currentPrice,
+    },
+    amount: b.amount,
+    strikePrice: b.strikePrice,
+    premium: b.premium,
+    settlementDate: b.settlementDate,
+    sellerInfo: {
+      name: b.sellerName ?? '',
+      bankName: b.sellerBankName ?? '',
+    },
+    buyerInfo: { name: '', bankName: '' },
+    status: b.status as OTCContract['status'],
   }
 }
 
@@ -188,11 +241,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     try {
       const { data: raw } = await apiFetch<BackendOfferDTO[]>('/api/otc/offers')
       const offers = (raw ?? []).map(adaptOffer)
-      const { user } = useAuthStore.getState()
-      const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
-      const unreadCount = offers.filter(
-        o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
-      ).length
+      const unreadCount = offers.filter(o => o.needsReview && o.status === 'ACTIVE').length
       set({ offers, offersLoading: false, unreadCount })
     } catch (e: unknown) {
       set({ offersLoading: false, offersError: String(e) })
@@ -266,16 +315,9 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   },
 
   markOfferRead: async () => {
-    // Backend ne čuva lastEntranceTimestamp — koristimo samo lokalni timestamp
-    // za "Discord-style" needsReview indikator.
-    localStorage.setItem('lastOtcReadTimestamp', new Date().toISOString())
-    const { offers } = get()
-    const { user } = useAuthStore.getState()
-    const lastRead = localStorage.getItem('lastOtcReadTimestamp') ?? '0'
-    const unreadCount = offers.filter(
-      o => o.lastModified > lastRead && o.modifiedBy !== String(user?.id ?? '')
-    ).length
-    set({ unreadCount })
+    // needsReview se računa na backendu (modifiedBy !== callerID); refresh vraća
+    // ažuriranu vrednost bez potrebe za lokalnim timestamp-om.
+    await get().fetchOffers()
   },
 
   // ── OTC Contracts ─────────────────────────────────────────────────────────
@@ -283,8 +325,8 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   fetchContracts: async () => {
     set({ contractsLoading: true })
     try {
-      const { data } = await apiFetch<OTCContract[]>('/api/otc/contracts')
-      set({ contracts: data, contractsLoading: false })
+      const { data } = await apiFetch<BackendContractDTO[]>('/api/otc/contracts')
+      set({ contracts: (data ?? []).map(adaptContract), contractsLoading: false })
     } catch {
       set({ contractsLoading: false })
     }
@@ -292,8 +334,8 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
 
   fetchContractDetail: async (id) => {
     try {
-      const { data } = await apiFetch<OTCContract>(`/api/otc/contracts/${id}`)
-      set({ activeContract: data })
+      const { data } = await apiFetch<BackendContractDTO>(`/api/otc/contracts/${id}`)
+      set({ activeContract: adaptContract(data) })
     } catch {
       // handled in component
     }
@@ -304,8 +346,8 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
     try {
       await apiFetch(`/api/otc/contracts/${id}/execute`, { method: 'POST' })
       set({ sagaStatus: 'success', sagaStatusMessage: 'Ugovor je uspešno iskorišćen.' })
-      const { data } = await apiFetch<OTCContract[]>('/api/otc/contracts')
-      set({ contracts: data })
+      const { data } = await apiFetch<BackendContractDTO[]>('/api/otc/contracts')
+      set({ contracts: (data ?? []).map(adaptContract) })
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
       set({ sagaStatus: 'failure', sagaStatusMessage: msg })
