@@ -34,3 +34,5 @@ coverage/
 
 # Vite
 vite.config.ts.timestamp-*
+# Added by code-review-graph
+.code-review-graph/
