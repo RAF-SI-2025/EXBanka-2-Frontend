@@ -14,7 +14,7 @@ function userHasRole(user: ReturnType<typeof useAuthStore.getState>['user'], rol
     case 'CLIENT':
       return user.userType === 'CLIENT'
     case 'SUPERVISOR':
-      return user.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+      return (user.userType === 'EMPLOYEE' || user.userType === 'ADMIN') && hasPermission('SUPERVISOR')
     case 'AGENT':
       return user.userType === 'EMPLOYEE'
     default:

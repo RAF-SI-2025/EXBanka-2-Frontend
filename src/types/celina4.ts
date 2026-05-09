@@ -24,6 +24,8 @@ export interface OTCOffer {
   sellerAccountId?: number | null
   // Backend-computed: true kada modified_by != callerID (nepročitana izmena)
   needsReview?: boolean
+  buyerName?: string
+  sellerName?: string
 }
 
 export interface PartyInfo {
@@ -34,6 +36,7 @@ export interface PartyInfo {
 export interface OTCContract {
   id: string
   offerId: string
+  buyerId: string
   stock: OTCStock
   amount: number
   strikePrice: number
@@ -61,6 +64,8 @@ export interface ClientFundPosition {
   clientId: string
   clientName: string
   fundId: string
+  fundName?: string
+  managerName?: string
   totalInvestedAmount: number
   fundSharePercentage: number | null
   currentPositionValue: number | null

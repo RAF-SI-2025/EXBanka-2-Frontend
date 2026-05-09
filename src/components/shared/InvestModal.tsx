@@ -25,7 +25,7 @@ export default function InvestModal({
   const [error, setError] = useState<string | null>(null)
 
   const numAmount = parseFloat(amount) || 0
-  const needsLiquidation = mode === 'redeem' && numAmount > liquidAssets
+  const needsLiquidation = mode === 'redeem' && (redeemAll || numAmount > liquidAssets)
 
   function handleSubmit() {
     setError(null)
@@ -93,10 +93,11 @@ export default function InvestModal({
           </select>
         </div>
 
-        {needsLiquidation && !redeemAll && (
+        {needsLiquidation && (
           <div className="mb-4 rounded-lg border border-yellow-300 bg-yellow-50 px-4 py-3 text-sm text-yellow-800">
-            ⚠ Iznos prelazi likvidna sredstva fonda ({liquidAssets.toLocaleString('sr-RS')} RSD).
-            Povlačenje će zahtevati likvidaciju hartija.
+            ⚠ Vaš zahtev zahteva prodaju hartija fonda. Finalni iznos isplate može odstupati
+            od traženog zbog tržišnih uslova u trenutku prodaje. Transakcija može trajati
+            duže od standardne isplate.
           </div>
         )}
 

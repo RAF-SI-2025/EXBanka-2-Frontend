@@ -21,6 +21,7 @@ export interface HoldingItem {
   accountId: string
   publicShares: number
   publicQuantity: number
+  reservedInContracts: number
   detailsJson: string
 }
 

@@ -30,12 +30,12 @@ interface CounterOfferFormProps {
 }
 
 export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, isLoading }: CounterOfferFormProps) {
-  const { user, hasPermission } = useAuthStore()
+  const { user } = useAuthStore()
   const callerID = String(user?.id ?? '')
   const isCaller = (id: string) => callerID !== '' && callerID === id
   const isBuyer = isCaller(offer.buyerId)
   const isSeller = isCaller(offer.sellerId)
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isEmployee = user?.userType === 'EMPLOYEE'
   const isMyTurn = offer.modifiedBy !== callerID && offer.status === 'ACTIVE'
 
   const [form, setForm] = useState<CounterOfferData>({
@@ -53,7 +53,7 @@ export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, 
   useEffect(() => {
     if (!isSeller) return
     let alive = true
-    const loadAccounts = isSupervisor ? getBankAccounts : getClientAccounts
+    const loadAccounts = isEmployee ? () => getBankAccounts(true) : getClientAccounts
     loadAccounts()
       .then((accs) => {
         if (!alive) return
@@ -68,7 +68,7 @@ export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, 
     return () => {
       alive = false
     }
-  }, [isSeller, isSupervisor, offer.sellerAccountId])
+  }, [isSeller, isEmployee, offer.sellerAccountId])
 
   function handleChange(field: keyof CounterOfferData, value: string) {
     setForm(prev => ({
@@ -86,7 +86,9 @@ export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, 
 
   const sellerAccNum = sellerAccountId ? Number(sellerAccountId) : undefined
   const sellerAccRequired = isSeller && !offer.sellerAccountId && !sellerAccNum
-  
+  // Kupac ne može da prihvati dok prodavac nije postavio račun za premiju.
+  const buyerBlockedNoSellerAcc = isBuyer && !offer.sellerAccountId
+
 
   function handleSubmitCounter() {
     onSubmit({ ...form, ...(isSeller && sellerAccNum ? { sellerAccountId: sellerAccNum } : {}) })
@@ -113,6 +115,11 @@ export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, 
         {!isMyTurn && offer.status === 'ACTIVE' && (
           <p className="mt-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-800">
             Čeka se odgovor druge strane. Ne možete prihvatiti ili odbiti ponudu koju ste sami poslednji izmenili.
+          </p>
+        )}
+        {buyerBlockedNoSellerAcc && isMyTurn && (
+          <p className="mt-2 rounded-md bg-orange-50 px-3 py-2 text-xs text-orange-800">
+            Prodavac još nije postavio račun za prijem premije. Prihvatanje nije moguće — pošaljite kontraponudu da prodavac postavi račun.
           </p>
         )}
       </div>
@@ -171,13 +178,15 @@ export default function CounterOfferForm({ offer, onSubmit, onAccept, onReject, 
           <button
             type="button"
             onClick={handleAccept}
-            disabled={isLoading || !isMyTurn || sellerAccRequired}
+            disabled={isLoading || !isMyTurn || sellerAccRequired || buyerBlockedNoSellerAcc}
             title={
               !isMyTurn
                 ? 'Ne možete prihvatiti ponudu koju ste sami poslednji izmenili.'
                 : sellerAccRequired
                   ? 'Izaberite račun za prijem premije.'
-                  : ''
+                  : buyerBlockedNoSellerAcc
+                    ? 'Prodavac još nije postavio račun za prijem premije.'
+                    : ''
             }
             className="flex-1 rounded-lg bg-green-600 py-2 text-sm font-semibold text-white hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
           >

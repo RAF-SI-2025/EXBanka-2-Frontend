@@ -12,7 +12,7 @@ export default function FundInvestPage() {
   const { user, hasPermission } = useAuthStore()
   const { activeFund, fetchFundDetail, investInFund } = useCelina4Store()
 
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
 
   const [accounts, setAccounts] = useState<AccountListItem[]>([])
   const [accountsLoading, setAccountsLoading] = useState(true)
@@ -28,10 +28,9 @@ export default function FundInvestPage() {
     const loader = isSupervisor ? getBankAccounts() : getClientAccounts()
     loader
       .then(list => {
-        // Fond ima RSD račun — može se uplaćivati samo iz RSD računa.
-        const rsd = list.filter(a => a.valuta_oznaka === 'RSD')
-        setAccounts(rsd)
-        if (rsd.length > 0) setAccountId(rsd[0].id)
+        const filtered = isSupervisor ? list.filter(a => a.valuta_oznaka === 'RSD') : list
+        setAccounts(filtered)
+        if (filtered.length > 0) setAccountId(filtered[0].id)
       })
       .catch(() => setAccounts([]))
       .finally(() => setAccountsLoading(false))

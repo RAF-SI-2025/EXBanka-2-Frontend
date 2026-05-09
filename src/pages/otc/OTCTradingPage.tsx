@@ -48,9 +48,9 @@ const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 export default function OTCTradingPage() {
   const navigate = useNavigate()
-  const { accessToken, user, hasPermission } = useAuthStore()
+  const { accessToken, user } = useAuthStore()
   const { setSagaStatus } = useCelina4Store()
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isEmployee = user?.userType === 'EMPLOYEE'
 
   const [items, setItems] = useState<MarketplaceItem[]>([])
   const [accounts, setAccounts] = useState<AccountListItem[]>([])
@@ -70,7 +70,7 @@ export default function OTCTradingPage() {
       setLoading(true)
       setError(null)
       try {
-        const loadAccounts = isSupervisor ? getBankAccounts : getClientAccounts
+        const loadAccounts = isEmployee ? () => getBankAccounts(true) : getClientAccounts
         const [mpRes, accs] = await Promise.all([
           fetch(`${API_BASE}/api/otc/marketplace`, {
             headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
@@ -93,7 +93,7 @@ export default function OTCTradingPage() {
     return () => {
       alive = false
     }
-  }, [accessToken, isSupervisor])
+  }, [accessToken, isEmployee])
 
   const filtered = useMemo(() => {
     const q = search.trim().toUpperCase()
@@ -223,6 +223,9 @@ export default function OTCTradingPage() {
               <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Berza
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Prodavac
+              </th>
               <th className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide text-gray-500">
                 Tržišna cena
               </th>
@@ -237,7 +240,7 @@ export default function OTCTradingPage() {
           <tbody className="divide-y divide-gray-100">
             {!loading && filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-4 py-10 text-center text-sm text-gray-500">
+                <td colSpan={7} className="px-4 py-10 text-center text-sm text-gray-500">
                   Trenutno nema akcija u OTC javnom režimu.
                 </td>
               </tr>
@@ -251,6 +254,9 @@ export default function OTCTradingPage() {
                 <td className="px-4 py-3 text-sm font-semibold text-gray-900">{it.ticker}</td>
                 <td className="px-4 py-3 text-sm text-gray-700">{it.stockName}</td>
                 <td className="px-4 py-3 text-sm text-gray-500">{it.exchange ?? '—'}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {it.sellerName || `#${it.sellerId}`}
+                </td>
                 <td className="px-4 py-3 text-right font-mono text-sm text-gray-700">
                   ${it.marketPriceUsd.toFixed(2)}
                 </td>
@@ -288,7 +294,7 @@ export default function OTCTradingPage() {
                 Nova OTC ponuda — {selected.ticker}
               </h2>
               <p className="text-xs text-gray-500">
-                {selected.stockName} · prodavac #{selected.sellerId} · dostupno{' '}
+                {selected.stockName} · prodavac {selected.sellerName || `#${selected.sellerId}`} · dostupno{' '}
                 <strong>{selected.availableQuantity}</strong> akcija
               </p>
             </div>

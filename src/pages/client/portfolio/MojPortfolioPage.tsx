@@ -266,7 +266,7 @@ export default function MojPortfolioPage() {
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Moj Portfolio</h1>
+        <h1 className="text-2xl font-bold text-gray-900">{user?.userType === 'CLIENT' ? 'Moj Portfolio' : 'Portfolio'}</h1>
         <p className="text-sm text-gray-500 mt-1">Pregled hartija od vrednosti i investicionih fondova</p>
       </div>
 
@@ -308,7 +308,7 @@ export default function MojPortfolioPage() {
                       <Th>Tip</Th>
                       <Th>Ticker</Th>
                       <Th right>Količina</Th>
-                      <Th right>Javno (OTC)</Th>
+                      <Th right>OTC rezervacija</Th>
                       <Th right>Tren. cena</Th>
                       <Th right>Pros. kupovna</Th>
                       <Th right>Profit</Th>
@@ -338,10 +338,28 @@ export default function MojPortfolioPage() {
                             <div className="text-xs text-gray-400">{h.name}</div>
                           </Td>
                           <Td right mono>{h.quantity.toLocaleString()}</Td>
-                          <Td right mono>
-                            {h.listingType === 'STOCK'
-                              ? h.publicQuantity.toLocaleString()
-                              : <span className="text-gray-300">—</span>}
+                          <Td right>
+                            {h.listingType === 'STOCK' ? (
+                              h.publicQuantity === 0 ? (
+                                <span className="text-gray-400 text-xs">nije javno</span>
+                              ) : (
+                                <div className="space-y-0.5 text-xs text-right font-mono">
+                                  <div className="text-gray-600">{h.publicQuantity.toLocaleString()} javno</div>
+                                  {h.reservedInContracts > 0 && (
+                                    <>
+                                      <div className="text-amber-600 font-semibold">
+                                        🔒 {h.reservedInContracts.toLocaleString()} rezerv.
+                                      </div>
+                                      <div className={`font-semibold ${h.publicQuantity - h.reservedInContracts > 0 ? 'text-green-600' : 'text-red-500'}`}>
+                                        ✓ {Math.max(0, h.publicQuantity - h.reservedInContracts).toLocaleString()} slobodno
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                              )
+                            ) : (
+                              <span className="text-gray-300">—</span>
+                            )}
                           </Td>
                           <Td right mono>{formatUSD(h.currentPrice)}</Td>
                           <Td right mono>{formatUSD(h.avgBuyPrice)}</Td>
@@ -577,10 +595,26 @@ export default function MojPortfolioPage() {
       >
         {publishDialog && (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Ukupno posedujete: <strong>{publishDialog.holding.quantity}</strong> akcija.<br />
-              Već javno: <strong>{publishDialog.holding.publicShares}</strong>.
-            </p>
+            <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Ukupno u vlasništvu:</span>
+                <span className="font-semibold">{publishDialog.holding.quantity.toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Javno objavljeno:</span>
+                <span className="font-semibold">{publishDialog.holding.publicShares.toLocaleString()}</span>
+              </div>
+              {publishDialog.holding.reservedInContracts > 0 && (
+                <div className="flex justify-between text-amber-700">
+                  <span>🔒 Rezervisano u ugovorima:</span>
+                  <span className="font-semibold">{publishDialog.holding.reservedInContracts.toLocaleString()}</span>
+                </div>
+              )}
+              <div className="flex justify-between border-t border-gray-200 pt-1.5 text-green-700">
+                <span>Slobodno za objavu:</span>
+                <span className="font-semibold">{(publishDialog.holding.quantity - publishDialog.holding.publicShares).toLocaleString()}</span>
+              </div>
+            </div>
             <div>
               <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
                 Broj akcija za objavu (max {publishDialog.holding.quantity - publishDialog.holding.publicShares})
