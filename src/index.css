@@ -16,6 +16,16 @@
   h3 { @apply text-lg font-semibold; }
 }
 
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer components {
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;

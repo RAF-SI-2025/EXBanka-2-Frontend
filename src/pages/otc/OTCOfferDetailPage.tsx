@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
+import { ArrowLeft, FileText } from 'lucide-react'
 import { useCelina4Store } from '@/store/useCelina4Store'
 import CounterOfferForm from '@/components/otc/CounterOfferForm'
 import SAGAStatusToast from '@/components/shared/SAGAStatusToast'
@@ -44,20 +45,31 @@ export default function OTCOfferDetailPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
-      <nav className="mb-4 text-sm text-gray-500">
-        <button
-          className="hover:text-gray-700"
-          onClick={() => navigate('/otc/offers')}
-        >
-          ← OTC Ponude
-        </button>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900">Ponuda #{activeOffer.id}</span>
-      </nav>
+      <button
+        onClick={() => navigate('/otc')}
+        className="mb-6 flex items-center gap-1.5 text-sm font-medium text-primary-600 hover:text-primary-800 transition-colors"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        OTC Ponude i Ugovori
+      </button>
 
-      <h1 className="mb-6 text-2xl font-bold text-gray-900">
-        Detalji ponude — {activeOffer.stock.ticker}
-      </h1>
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-primary-100">
+          <FileText className="h-5 w-5 text-primary-700" />
+        </div>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Detalji ponude
+          </h1>
+          <p className="mt-0.5 text-sm text-gray-500">
+            <span className="font-medium text-primary-700">{activeOffer.stock.ticker}</span>
+            {activeOffer.stock.exchange && (
+              <span className="text-gray-400"> · {activeOffer.stock.exchange}</span>
+            )}
+            <span className="text-gray-400"> · #{activeOffer.id}</span>
+          </p>
+        </div>
+      </div>
 
       <CounterOfferForm
         offer={activeOffer}

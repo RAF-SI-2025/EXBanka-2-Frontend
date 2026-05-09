@@ -7,7 +7,7 @@ export default function CreateFundPage() {
   const navigate = useNavigate()
   const { user, hasPermission } = useAuthStore()
 
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
 
   if (!isSupervisor) {
     return (

@@ -153,22 +153,22 @@ const router = createBrowserRouter(
 
           {/* ── Celina 4 – OTC ──────────────────────────────────────────── */}
           <Route path="/otc/trade" element={
-            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <OTCTradingPage />
             </AllowedRolesRoute>
           } />
           <Route path="/otc" element={
-            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <OTCCombinedPage />
             </AllowedRolesRoute>
           } />
           <Route path="/otc/offers/:id" element={
-            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <OTCOfferDetailPage />
             </AllowedRolesRoute>
           } />
           <Route path="/otc/contracts/:id" element={
-            <AllowedRolesRoute allowedRoles={['CLIENT', 'SUPERVISOR']}>
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <OTCContractDetailPage />
             </AllowedRolesRoute>
           } />

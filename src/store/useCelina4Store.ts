@@ -33,6 +33,8 @@ interface BackendOfferDTO {
   modifiedBy: number | string
   marketPriceUsd?: number
   needsReview?: boolean
+  buyerName?: string
+  sellerName?: string
 }
 
 function adaptOffer(b: BackendOfferDTO): OTCOffer & {
@@ -65,6 +67,8 @@ function adaptOffer(b: BackendOfferDTO): OTCOffer & {
     buyerAccountId: b.buyerAccountId,
     sellerAccountId: b.sellerAccountId ?? null,
     needsReview: b.needsReview ?? false,
+    buyerName: b.buyerName,
+    sellerName: b.sellerName,
   }
 }
 
@@ -94,12 +98,14 @@ interface BackendContractDTO {
   sellerInfo: string
   sellerName: string
   sellerBankName: string
+  buyerName?: string
 }
 
 function adaptContract(b: BackendContractDTO): OTCContract {
   return {
     id: String(b.id),
     offerId: String(b.offerId),
+    buyerId: String(b.buyerId),
     stock: {
       ticker: b.ticker ?? '',
       name: b.stockName ?? '',
@@ -114,7 +120,10 @@ function adaptContract(b: BackendContractDTO): OTCContract {
       name: b.sellerName ?? '',
       bankName: b.sellerBankName ?? '',
     },
-    buyerInfo: { name: '', bankName: '' },
+    buyerInfo: {
+      name: b.buyerName ?? '',
+      bankName: '',
+    },
     status: b.status as OTCContract['status'],
   }
 }
@@ -144,7 +153,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<{ data: T;
   })
   if (!res.ok && res.status !== 202) {
     const body = await res.json().catch(() => ({}))
-    const err = new Error(body.message ?? res.statusText) as Error & { response: { data: unknown; status: number } }
+    const err = new Error(body.error ?? body.message ?? res.statusText) as Error & { response: { data: unknown; status: number } }
     err.response = { data: body, status: res.status }
     throw err
   }
@@ -344,10 +353,30 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   executeContract: async (id) => {
     set({ sagaStatus: 'pending', sagaStatusMessage: null })
     try {
+      // 202 Accepted — SAGA se pokreće u pozadini, ugovor još nije EXERCISED.
       await apiFetch(`/api/otc/contracts/${id}/execute`, { method: 'POST' })
-      set({ sagaStatus: 'success', sagaStatusMessage: 'Ugovor je uspešno iskorišćen.' })
-      const { data } = await apiFetch<BackendContractDTO[]>('/api/otc/contracts')
-      set({ contracts: (data ?? []).map(adaptContract) })
+
+      // Polujemo dok ugovor ne postane EXERCISED (max 8 × 2s = 16s).
+      let exercised = false
+      for (let i = 0; i < 8 && !exercised; i++) {
+        await new Promise<void>(r => setTimeout(r, 2000))
+        try {
+          const { data: c } = await apiFetch<BackendContractDTO>(`/api/otc/contracts/${id}`)
+          if (c.status === 'EXERCISED') {
+            set({ activeContract: adaptContract(c) })
+            exercised = true
+          }
+        } catch { /* nastavi polling */ }
+      }
+
+      const { data: list } = await apiFetch<BackendContractDTO[]>('/api/otc/contracts')
+      set({ contracts: (list ?? []).map(adaptContract) })
+
+      if (exercised) {
+        set({ sagaStatus: 'success', sagaStatusMessage: 'Ugovor je uspešno iskorišćen.' })
+      } else {
+        set({ sagaStatus: 'success', sagaStatusMessage: 'Izvršavanje pokrenuto. Proverite status ugovora za potvrdu.' })
+      }
     } catch (e: unknown) {
       const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
       set({ sagaStatus: 'failure', sagaStatusMessage: msg })
@@ -404,8 +433,9 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
       set({ sagaStatus: 'success', sagaStatusMessage: 'Uplata je uspešno izvršena.' })
       await get().fetchFundDetail(id)
     } catch (e: unknown) {
-      const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? String(e)
+      const msg = (e as { message?: string })?.message ?? String(e)
       set({ sagaStatus: 'failure', sagaStatusMessage: msg })
+      throw e
     }
   },
 
@@ -416,7 +446,7 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
       const res = await fetch(`${API_BASE}/api/bank/funds/${id}/withdraw`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}) },
-        body: JSON.stringify({ amount, accountId }),
+        body: JSON.stringify({ amountRsd: amount > 0 ? amount : 0, accountId, withdrawAll: amount <= 0 }),
       })
       if (res.status === 202) {
         set({
@@ -428,8 +458,9 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
       }
       if (!res.ok) {
         const body = await res.json().catch(() => ({}))
-        set({ sagaStatus: 'failure', sagaStatusMessage: body.message ?? 'Greška pri isplati.' })
-        throw new Error(body.message)
+        const msg = body.error ?? body.message ?? 'Greška pri isplati.'
+        set({ sagaStatus: 'failure', sagaStatusMessage: msg })
+        throw new Error(msg)
       }
       set({ sagaStatus: 'success', sagaStatusMessage: 'Isplata je uspešno izvršena.' })
       await get().fetchFundDetail(id)

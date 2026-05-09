@@ -10,8 +10,8 @@ import type { AccountListItem } from '@/types'
 interface FundDetailViewProps {
   fund: InvestmentFund
   userRole: C4UserRole
-  bankAccounts?: AccountListItem[]
-  clientAccounts?: AccountListItem[]
+  investAccounts?: AccountListItem[]  // supervisors: RSD bank accounts; clients: own accounts
+  redeemAccounts?: AccountListItem[]  // supervisors: all bank accounts; clients: own accounts
 }
 
 const fmtRSD = (v: number | null) =>
@@ -19,13 +19,13 @@ const fmtRSD = (v: number | null) =>
     ? '—'
     : new Intl.NumberFormat('sr-RS', { style: 'currency', currency: 'RSD', maximumFractionDigits: 0 }).format(v)
 
-export default function FundDetailView({ fund, userRole, bankAccounts = [], clientAccounts = [] }: FundDetailViewProps) {
+export default function FundDetailView({ fund, userRole, investAccounts = [], redeemAccounts = [] }: FundDetailViewProps) {
   const [investModal, setInvestModal] = useState<'invest' | 'redeem' | null>(null)
   const { investInFund, redeemFromFund, sellFundSecurity, performanceData, performanceLoading } = useCelina4Store()
 
   const isSupervisor = userRole === 'SUPERVISOR'
   const isClient = userRole === 'CLIENT'
-  const accounts = isSupervisor ? bankAccounts : clientAccounts
+  const accounts = investModal === 'redeem' ? redeemAccounts : investAccounts
 
   async function handleInvest(amount: number, accountId: string) {
     await investInFund(fund.id, amount, accountId)
@@ -33,7 +33,7 @@ export default function FundDetailView({ fund, userRole, bankAccounts = [], clie
   }
 
   async function handleRedeem(amount: number, accountId: string) {
-    await redeemFromFund(fund.id, amount === -1 ? fund.fundValueRsd ?? 0 : amount, accountId)
+    await redeemFromFund(fund.id, amount, accountId)
     setInvestModal(null)
   }
 

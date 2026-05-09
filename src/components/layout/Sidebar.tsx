@@ -112,18 +112,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <CreditCard className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
   },
-  {
-    label: 'Zahtevi za kredit',
-    to: '/employee/credits/requests',
-    icon: <FileText className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
-  },
-  {
-    label: 'Svi krediti',
-    to: '/employee/credits/all',
-    icon: <Landmark className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
-  },
+  // Krediti rendered as collapsible group after this item
   {
     label: 'Upravljanje aktuarima',
     to: '/employee/actuaries',
@@ -185,7 +174,7 @@ const NAV_ITEMS: NavItem[] = [
     employeeNeedsActuary: true,
   },
   {
-    label: 'Moj Portfolio',
+    label: 'Portfolio',
     to: '/portfolio',
     icon: <Banknote className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
@@ -198,7 +187,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/otc/trade',
     icon: <Handshake className="h-5 w-5" />,
     roles: ['EMPLOYEE'],
-    permission: ['SUPERVISOR'],
+    permission: ['SUPERVISOR', 'AGENT'],
     end: true,
   },
   {
@@ -207,7 +196,7 @@ const NAV_ITEMS: NavItem[] = [
     icon: <FileText className="h-5 w-5" />,
     badge: <UnreadOffersBadge />,
     roles: ['EMPLOYEE'],
-    permission: ['SUPERVISOR'],
+    permission: ['SUPERVISOR', 'AGENT'],
     end: true,
   },
   {
@@ -248,6 +237,11 @@ const PAYMENT_SUB_ITEMS = [
   { label: 'Pregled plaćanja',   to: '/client/payments/history',    icon: <ClipboardList className="h-4 w-4" /> },
 ]
 
+const KREDITI_SUB_ITEMS = [
+  { label: 'Zahtevi za kredit', to: '/employee/credits/requests', icon: <FileText className="h-4 w-4" /> },
+  { label: 'Svi krediti',       to: '/employee/credits/all',      icon: <Landmark className="h-4 w-4" /> },
+]
+
 const PROFIT_BANKE_SUB_ITEMS = [
   { label: 'Profit aktuara',       to: '/bank/actuary-performance', icon: <BarChart2 className="h-4 w-4" /> },
   { label: 'Pozicije u fondovima', to: '/bank/fund-positions',      icon: <Building2 className="h-4 w-4" /> },
@@ -264,12 +258,15 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
   const location = useLocation()
 
   const isClient = user?.userType === 'CLIENT'
+  const isEmployee = user?.userType === 'EMPLOYEE'
   const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
   const isOnPayments = location.pathname.startsWith('/client/payments')
   const isOnProfitBanke = location.pathname.startsWith('/bank/')
+  const isOnKrediti = location.pathname.startsWith('/employee/credits')
 
   const [paymentOpen, setPaymentOpen] = useState(isOnPayments)
   const [profitBankeOpen, setProfitBankeOpen] = useState(isOnProfitBanke)
+  const [kreditiOpen, setKreditiOpen] = useState(isOnKrediti)
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!user?.userType || !item.roles.includes(user.userType)) return false
@@ -286,6 +283,33 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
     }
     return true
   })
+
+  // Split point for EMPLOYEE: insert Krediti collapsible after 'Kreiraj račun'
+  const kreditiIdx = isEmployee
+    ? visibleItems.findIndex((i) => i.to === '/employee/accounts/new')
+    : -1
+
+  const renderNavItem = (item: NavItem) => (
+    <NavLink
+      key={item.to}
+      to={item.to}
+      end={item.end ?? (item.to === '/admin' || item.to === '/employee' || item.to === '/client')}
+      onClick={onMobileClose}
+      className={({ isActive }) =>
+        [
+          'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+          isClient ? '' : 'gap-3',
+          isActive
+            ? 'bg-primary-700 text-white'
+            : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+        ].join(' ')
+      }
+    >
+      {item.icon && item.icon}
+      <span className="flex-1">{item.label}</span>
+      {item.badge && item.badge}
+    </NavLink>
+  )
 
   return (
     <>
@@ -331,28 +355,58 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
         )}
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
-          {visibleItems.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end ?? (item.to === '/admin' || item.to === '/employee' || item.to === '/client')}
-              onClick={onMobileClose}
-              className={({ isActive }) =>
-                [
-                  'flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  isClient ? '' : 'gap-3',
-                  isActive
+        <nav className="flex-1 overflow-y-auto scrollbar-hide px-3 py-4 space-y-1">
+          {/* Items before Krediti group (or all items for non-EMPLOYEE) */}
+          {(kreditiIdx >= 0 ? visibleItems.slice(0, kreditiIdx + 1) : visibleItems).map(renderNavItem)}
+
+          {/* Krediti collapsible (EMPLOYEE only) */}
+          {kreditiIdx >= 0 && (
+            <div>
+              <button
+                onClick={() => setKreditiOpen((v) => !v)}
+                className={[
+                  'w-full flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                  isOnKrediti
                     ? 'bg-primary-700 text-white'
                     : 'text-primary-300 hover:bg-primary-800 hover:text-white',
-                ].join(' ')
-              }
-            >
-              {item.icon && item.icon}
-              <span className="flex-1">{item.label}</span>
-              {item.badge && item.badge}
-            </NavLink>
-          ))}
+                ].join(' ')}
+              >
+                <div className="flex items-center gap-3">
+                  <Landmark className="h-5 w-5" />
+                  Krediti
+                </div>
+                {kreditiOpen
+                  ? <ChevronDown className="h-4 w-4" />
+                  : <ChevronRight className="h-4 w-4" />}
+              </button>
+
+              {kreditiOpen && (
+                <div className="mt-1 space-y-0.5 pl-3">
+                  {KREDITI_SUB_ITEMS.map((sub) => (
+                    <NavLink
+                      key={sub.to}
+                      to={sub.to}
+                      onClick={onMobileClose}
+                      className={({ isActive }) =>
+                        [
+                          'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                          isActive
+                            ? 'bg-primary-700 text-white'
+                            : 'text-primary-300 hover:bg-primary-800 hover:text-white',
+                        ].join(' ')
+                      }
+                    >
+                      {sub.icon}
+                      {sub.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Items after Krediti group (EMPLOYEE only) */}
+          {kreditiIdx >= 0 && visibleItems.slice(kreditiIdx + 1).map(renderNavItem)}
 
           {/* ── Plaćanja collapsible submenu (CLIENT only) ── */}
           {isClient && (

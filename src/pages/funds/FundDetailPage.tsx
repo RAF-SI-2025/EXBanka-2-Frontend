@@ -12,11 +12,12 @@ export default function FundDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { user, hasPermission } = useAuthStore()
-  const { activeFund, activeFundLoading, fetchFundDetail } = useCelina4Store()
-  const [bankAccounts, setBankAccounts] = useState<AccountListItem[]>([])
+  const { activeFund, activeFundLoading, fetchFundDetail, sagaStatus } = useCelina4Store()
+  const [bankAccountsRSD, setBankAccountsRSD] = useState<AccountListItem[]>([])
+  const [bankAccountsAll, setBankAccountsAll] = useState<AccountListItem[]>([])
   const [clientAccounts, setClientAccounts] = useState<AccountListItem[]>([])
 
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
   const isClient = user?.userType === 'CLIENT'
 
   const userRole: C4UserRole = isSupervisor ? 'SUPERVISOR' : isClient ? 'CLIENT' : 'AGENT'
@@ -26,17 +27,26 @@ export default function FundDetailPage() {
     fetchFundDetail(id)
   }, [id, fetchFundDetail])
 
-  useEffect(() => {
+  function loadAccounts() {
     if (isSupervisor) {
       getBankAccounts()
-        .then(list => setBankAccounts(list.filter(a => a.valuta_oznaka === 'RSD')))
-        .catch(() => setBankAccounts([]))
+        .then(list => {
+          setBankAccountsAll(list)
+          setBankAccountsRSD(list.filter(a => a.valuta_oznaka === 'RSD'))
+        })
+        .catch(() => { setBankAccountsAll([]); setBankAccountsRSD([]) })
     } else if (isClient) {
       getClientAccounts()
-        .then(list => setClientAccounts(list.filter(a => a.valuta_oznaka === 'RSD')))
+        .then(list => setClientAccounts(list))
         .catch(() => setClientAccounts([]))
     }
-  }, [isSupervisor, isClient])
+  }
+
+  useEffect(() => { loadAccounts() }, [isSupervisor, isClient]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (sagaStatus === 'success') loadAccounts()
+  }, [sagaStatus]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (activeFundLoading || !activeFund) {
     return (
@@ -59,8 +69,8 @@ export default function FundDetailPage() {
       <FundDetailView
         fund={activeFund}
         userRole={userRole}
-        bankAccounts={bankAccounts}
-        clientAccounts={clientAccounts}
+        investAccounts={isSupervisor ? bankAccountsRSD : clientAccounts}
+        redeemAccounts={isSupervisor ? bankAccountsAll : clientAccounts}
       />
 
       <SAGAStatusToast />

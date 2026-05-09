@@ -19,7 +19,7 @@ export default function FundsDiscoveryPage() {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('')
 
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
 
   useEffect(() => {
     fetchFunds()

@@ -184,8 +184,9 @@ export async function getClientAccounts(): Promise<AccountListItem[]> {
 
 // ─── GetBankAccounts (RSD računi banke — vlasnik_id=2 / trezor) ──────────────
 // Koriste supervizori i admini za "investiranje u ime banke" i kupovinu hartija u ime banke.
-export async function getBankAccounts(): Promise<AccountListItem[]> {
-  const res = await apiGet<{ accounts: BackendAccountListItem[] | null }>('/bank/bank-accounts')
+export async function getBankAccounts(allCurrencies = false): Promise<AccountListItem[]> {
+  const url = allCurrencies ? '/bank/bank-accounts?allCurrencies=true' : '/bank/bank-accounts'
+  const res = await apiGet<{ accounts: BackendAccountListItem[] | null }>(url)
   return (res.accounts ?? []).map((a) => ({
     id:                   String(a.id),
     broj_racuna:          a.brojRacuna,

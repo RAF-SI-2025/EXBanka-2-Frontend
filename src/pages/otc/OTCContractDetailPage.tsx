@@ -1,10 +1,11 @@
 import { useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useCelina4Store } from '@/store/useCelina4Store'
+import { useAuthStore } from '@/store/authStore'
 import SAGAStatusToast from '@/components/shared/SAGAStatusToast'
 
-const fmtRSD = (v: number) =>
-  new Intl.NumberFormat('sr-RS', { style: 'currency', currency: 'RSD', maximumFractionDigits: 2 }).format(v)
+const fmtUSD = (v: number) =>
+  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(v)
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString('sr-RS', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -14,6 +15,7 @@ export default function OTCContractDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { activeContract, sagaStatus, fetchContractDetail, executeContract } = useCelina4Store()
+  const { user } = useAuthStore()
 
   useEffect(() => {
     if (id) fetchContractDetail(id)
@@ -26,10 +28,9 @@ export default function OTCContractDetailPage() {
       </div>
     )
   }
-
   const c = activeContract
-  const settlementPassed = new Date(c.settlementDate) < new Date()
-  const canExecute = c.status === 'VALID' && !settlementPassed
+  const isBuyer = String(user?.id ?? '') === c.buyerId
+  const status = (c.status === 'VALID' && new Date(c.settlementDate) < new Date()) ? 'EXPIRED' : c.status
   const currentPrice = c.stock.lastKnownMarketPrice ?? c.strikePrice
   const profit = (c.amount * currentPrice) - (c.amount * c.strikePrice) - c.premium
 
@@ -42,7 +43,7 @@ export default function OTCContractDetailPage() {
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <nav className="mb-4 text-sm text-gray-500">
-        <button className="hover:text-gray-700" onClick={() => navigate('/otc/contracts')}>
+        <button className="hover:text-gray-700" onClick={() => navigate('/otc')}>
           ← OTC Ugovori
         </button>
         <span className="mx-2">/</span>
@@ -54,11 +55,11 @@ export default function OTCContractDetailPage() {
           {c.stock.ticker} — {c.stock.name}
         </h1>
         <span className={`rounded-full px-3 py-1 text-sm font-semibold ${
-          c.status === 'VALID' ? 'bg-green-100 text-green-800' :
-          c.status === 'EXPIRED' ? 'bg-gray-100 text-gray-700' :
+          status === 'VALID' ? 'bg-green-100 text-green-800' :
+          status === 'EXPIRED' ? 'bg-gray-100 text-gray-700' :
           'bg-blue-100 text-blue-800'
         }`}>
-          {STATUS_MAP[c.status]}
+          {STATUS_MAP[status]}
         </span>
       </div>
 
@@ -67,10 +68,10 @@ export default function OTCContractDetailPage() {
           {[
             ['Berza', c.stock.exchange],
             ['Količina', c.amount.toLocaleString('sr-RS')],
-            ['Strike cena', fmtRSD(c.strikePrice)],
-            ['Premija', fmtRSD(c.premium)],
+            ['Strike cena', fmtUSD(c.strikePrice)],
+            ['Premija', fmtUSD(c.premium)],
             ['Datum poravnanja', formatDate(c.settlementDate)],
-            ['Tržišna cena', c.stock.lastKnownMarketPrice ? fmtRSD(c.stock.lastKnownMarketPrice) : '—'],
+            ['Tržišna cena', c.stock.lastKnownMarketPrice ? fmtUSD(c.stock.lastKnownMarketPrice) : '—'],
           ].map(([label, value]) => (
             <div key={label}>
               <dt className="text-xs text-gray-500">{label}</dt>
@@ -95,18 +96,20 @@ export default function OTCContractDetailPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Procenjeni profit</p>
           <p className={`mt-1 text-2xl font-bold ${profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-            {fmtRSD(profit)}
+            {fmtUSD(profit)}
           </p>
         </div>
 
-        <button
-          onClick={() => id && executeContract(id)}
-          disabled={!canExecute || sagaStatus === 'pending'}
-          className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
-          title={!canExecute ? 'Ugovor nije važeći ili je datum poravnanja prošao' : undefined}
-        >
-          Iskoristi ugovor
-        </button>
+        {isBuyer && (
+          <button
+            onClick={() => id && executeContract(id)}
+            disabled={status !== 'VALID' || sagaStatus === 'pending'}
+            className="w-full rounded-xl bg-blue-600 py-3 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
+            title={status !== 'VALID' ? 'Ugovor nije važeći ili je datum poravnanja prošao' : undefined}
+          >
+            Iskoristi ugovor
+          </button>
+        )}
       </div>
 
       <SAGAStatusToast />

@@ -29,7 +29,7 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {['#', 'Akcija', 'Strana', 'Količina', 'Cena', 'Premija', 'Poravnanje', 'Izmenio', 'Poslednja izmena', 'Status', 'Akcije'].map(h => (
+            {['#', 'Akcija', 'Kupac', 'Prodavac', 'Količina', 'Cena', 'Premija', 'Poravnanje', 'Izmenio', 'Poslednja izmena', 'Status', 'Akcije'].map(h => (
               <th key={h} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                 {h}
               </th>
@@ -39,7 +39,7 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
         <tbody className="divide-y divide-gray-100">
           {offers.length === 0 && (
             <tr>
-              <td colSpan={11} className="py-10 text-center text-gray-400">
+              <td colSpan={12} className="py-10 text-center text-gray-400">
                 Nema ponuda.
               </td>
             </tr>
@@ -47,9 +47,9 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
           {offers.map(offer => {
             const isBuyer = offer.buyerId === callerID
             const isMyTurn = !!offer.needsReview && offer.status === 'ACTIVE'
-            // Akcept iz tabele dozvoljen samo kupcu (prodavac često mora da bira
-            // svoj račun za prijem premije — to ide preko detalja).
-            const canQuickAccept = isMyTurn && isBuyer
+            // Quick-accept iz tabele: dozvoljen kupcu samo ako je prodavac već
+            // postavio račun za premiju (inače accept pada na backendu).
+            const canQuickAccept = isMyTurn && isBuyer && !!offer.sellerAccountId
             return (
               <tr
                 key={offer.id}
@@ -64,14 +64,18 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
                     <span className="ml-1 text-xs text-gray-500">({offer.stock.exchange})</span>
                   )}
                 </td>
-                <td className="px-4 py-3 text-xs text-gray-600">
-                  {isBuyer ? 'Kupac' : 'Prodavac'}
+                <td className="px-4 py-3 text-xs text-gray-700">
+                  {offer.buyerName || `#${offer.buyerId}`}
+                </td>
+                <td className="px-4 py-3 text-xs text-gray-700">
+                  {offer.sellerName || `#${offer.sellerId}`}
                 </td>
                 <td className="px-4 py-3 text-gray-700">{offer.amount.toLocaleString('sr-RS')}</td>
                 <td className="px-4 py-3">
                   <PriceDeviationBadge
                     currentPrice={offer.pricePerStock}
                     referencePrice={offer.stock.lastKnownMarketPrice ?? offer.pricePerStock}
+                    currency="USD"
                   />
                 </td>
                 <td className="px-4 py-3 text-gray-700">
@@ -79,10 +83,10 @@ export default function OTCTradeTable({ offers, onView }: OTCTradeTableProps) {
                 </td>
                 <td className="px-4 py-3 text-gray-700">{formatDate(offer.settlementDate)}</td>
                 <td className="px-4 py-3 text-xs text-gray-700">
-                  #{offer.modifiedBy}
-                  {offer.modifiedBy === callerID && (
-                    <span className="ml-1 text-gray-400">(vi)</span>
-                  )}
+                  {offer.modifiedBy === offer.buyerId
+                    ? (offer.buyerName || `#${offer.buyerId}`)
+                    : (offer.sellerName || `#${offer.sellerId}`)
+                  }
                 </td>
                 <td className="px-4 py-3 text-gray-500">{formatDate(offer.lastModified)}</td>
                 <td className="px-4 py-3">
