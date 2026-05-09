@@ -266,7 +266,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const [paymentOpen, setPaymentOpen] = useState(isOnPayments)
   const [profitBankeOpen, setProfitBankeOpen] = useState(isOnProfitBanke)
-  const [kreditiOpen, setKreditiOpen] = useState(isOnKrediti)
+  const [kreditiOpen, setKreditiOpen] = useState(isOnKrediti || isEmployee)
 
   const visibleItems = NAV_ITEMS.filter((item) => {
     if (!user?.userType || !item.roles.includes(user.userType)) return false
