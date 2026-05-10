@@ -7,6 +7,13 @@ import { apiGet, apiPost } from './grpcClient'
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
+export interface BuyLot {
+  orderId: string
+  price: number
+  quantity: number
+  executedAt: string
+}
+
 export interface HoldingItem {
   listingId: string
   ticker: string
@@ -23,6 +30,7 @@ export interface HoldingItem {
   publicQuantity: number
   reservedInContracts: number
   detailsJson: string
+  buyLots: BuyLot[]
 }
 
 export interface PortfolioResponse {
