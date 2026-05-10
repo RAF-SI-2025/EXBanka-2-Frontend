@@ -126,6 +126,8 @@ export default function MojPortfolioPage() {
   const [exerciseDialog, setExerciseDialog] = useState<{ holding: HoldingItem } | null>(null)
   const [exerciseLoading, setExerciseLoading] = useState(false)
 
+  const [profitDialog, setProfitDialog] = useState<{ holding: HoldingItem } | null>(null)
+
   const [investDialog, setInvestDialog] = useState<{ fund: ClientFund | ManagedFund } | null>(null)
   const [investAmount, setInvestAmount] = useState('')
   const [investAccountId, setInvestAccountId] = useState('')
@@ -364,9 +366,14 @@ export default function MojPortfolioPage() {
                           <Td right mono>{formatUSD(h.currentPrice)}</Td>
                           <Td right mono>{formatUSD(h.avgBuyPrice)}</Td>
                           <Td right>
-                            <span className={`font-semibold ${profitPos ? 'text-green-600' : 'text-red-500'}`}>
+                            <button
+                              type="button"
+                              onClick={() => setProfitDialog({ holding: h })}
+                              className={`font-semibold underline-offset-2 hover:underline focus:outline-none focus:ring-2 focus:ring-primary-300 rounded ${profitPos ? 'text-green-600' : 'text-red-500'}`}
+                              title="Pogledaj detalje profita"
+                            >
                               {profitPos ? '+' : ''}{formatUSD(h.profit)}
-                            </span>
+                            </button>
                           </Td>
                           <Td><span className="text-xs text-gray-500">{new Date(h.lastModified).toLocaleDateString('sr-RS')}</span></Td>
                           <Td>
@@ -636,6 +643,102 @@ export default function MojPortfolioPage() {
             </div>
           </div>
         )}
+      </Dialog>
+
+      {/* Profit details dialog */}
+      <Dialog
+        open={!!profitDialog}
+        onClose={() => setProfitDialog(null)}
+        title={`Detalji profita: ${profitDialog?.holding.ticker ?? ''}`}
+        maxWidth="md"
+      >
+        {profitDialog && (() => {
+          const h = profitDialog.holding
+          const lots = h.buyLots ?? []
+          const totalQty = lots.reduce((s, l) => s + l.quantity, 0)
+          const totalValue = lots.reduce((s, l) => s + l.price * l.quantity, 0)
+          const computedAvg = totalQty > 0 ? totalValue / totalQty : h.avgBuyPrice
+          const profitPos = h.profit >= 0
+          return (
+            <div className="space-y-4 text-sm">
+              <div className="rounded-lg bg-blue-50 border border-blue-100 px-4 py-3 text-blue-900 space-y-1">
+                <div>Trenutna cena: <strong>{formatUSD(h.currentPrice)}</strong></div>
+                <div>Prosečna kupovna: <strong>{formatUSD(h.avgBuyPrice)}</strong></div>
+                <div>Trenutna količina (neto): <strong>{h.quantity.toLocaleString()}</strong></div>
+              </div>
+
+              <div>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+                  Kupovne tranše ({lots.length})
+                </h3>
+                {lots.length === 0 ? (
+                  <p className="text-gray-400 italic">Nema zabeleženih kupovnih tranši.</p>
+                ) : (
+                  <div className="overflow-x-auto rounded-lg border border-gray-200">
+                    <table className="w-full border-collapse">
+                      <thead>
+                        <tr className="bg-gray-50 border-b border-gray-200">
+                          <Th>Datum</Th>
+                          <Th right>Količina</Th>
+                          <Th right>Cena</Th>
+                          <Th right>Vrednost</Th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {lots.map((l) => (
+                          <tr key={l.orderId}>
+                            <Td>
+                              <span className="text-xs text-gray-600">
+                                {new Date(l.executedAt).toLocaleDateString('sr-RS')}
+                              </span>
+                            </Td>
+                            <Td right mono>{l.quantity.toLocaleString()}</Td>
+                            <Td right mono>{formatUSD(l.price)}</Td>
+                            <Td right mono>{formatUSD(l.price * l.quantity)}</Td>
+                          </tr>
+                        ))}
+                        <tr className="bg-gray-50 font-semibold">
+                          <Td>Σ</Td>
+                          <Td right mono>{totalQty.toLocaleString()}</Td>
+                          <Td right>—</Td>
+                          <Td right mono>{formatUSD(totalValue)}</Td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg bg-gray-50 border border-gray-200 px-4 py-3 space-y-1 text-gray-700">
+                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">
+                  Računica
+                </div>
+                {lots.length > 0 && (
+                  <div className="font-mono text-xs">
+                    Pros. cena = {formatUSD(totalValue)} / {totalQty.toLocaleString()} = <strong>{formatUSD(computedAvg)}</strong>
+                  </div>
+                )}
+                <div className="font-mono text-xs">
+                  Profit = ({formatUSD(h.currentPrice)} − {formatUSD(h.avgBuyPrice)}) × {h.quantity.toLocaleString()}
+                </div>
+                <div className="pt-1">
+                  Profit = <strong className={profitPos ? 'text-green-700' : 'text-red-600'}>
+                    {profitPos ? '+' : ''}{formatUSD(h.profit)}
+                  </strong>
+                </div>
+                {h.quantity < totalQty && (
+                  <p className="text-[11px] text-gray-500 pt-2">
+                    Napomena: deo akcija je već prodat. Profit se računa na trenutno držanu količinu ({h.quantity.toLocaleString()} od {totalQty.toLocaleString()} ukupno kupljenih).
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button variant="secondary" size="sm" onClick={() => setProfitDialog(null)}>Zatvori</Button>
+              </div>
+            </div>
+          )
+        })()}
       </Dialog>
 
       {/* Exercise option dialog */}

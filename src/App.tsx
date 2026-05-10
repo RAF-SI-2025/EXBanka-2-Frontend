@@ -73,6 +73,10 @@ import OTCCombinedPage from '@/pages/otc/OTCCombinedPage'
 import OTCOfferDetailPage from '@/pages/otc/OTCOfferDetailPage'
 import OTCContractDetailPage from '@/pages/otc/OTCContractDetailPage'
 
+// ── Interbank (si-tx-proto) ──────────────────────────────────────────────────
+import InterbankPaymentPage from '@/pages/client/payments/InterbankPaymentPage'
+import InterbankOTCPage from '@/pages/otc/InterbankOTCPage'
+
 // ── Celina 4 – Fondovi ────────────────────────────────────────────────────────
 import FundsDiscoveryPage from '@/pages/funds/FundsDiscoveryPage'
 import FundDetailPage from '@/pages/funds/FundDetailPage'
@@ -207,12 +211,25 @@ const router = createBrowserRouter(
             </AllowedRolesRoute>
           } />
 
+          {/* ── Interbank (si-tx-proto) ──────────────────────────────── */}
+          <Route path="/interbank/payments" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT']}>
+              <InterbankPaymentPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/interbank/otc" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <InterbankOTCPage />
+            </AllowedRolesRoute>
+          } />
+
           {/* Client home */}
           <Route path="/client" element={<PrivateRoute requiredRole="CLIENT" />}>
             <Route index element={<ClientPage />} />
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="accounts/:id" element={<AccountDetailPage />} />
             <Route path="payments/new" element={<NovoPlacanjeWizard />} />
+            <Route path="payments/interbank" element={<InterbankPaymentPage />} />
             <Route path="payments/transfer" element={<PrenosPage />} />
             <Route path="payments/recipients" element={<PrimaociPage />} />
             <Route path="payments/history" element={<PregledPlacanja />} />
