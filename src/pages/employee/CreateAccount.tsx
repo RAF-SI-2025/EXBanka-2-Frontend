@@ -102,6 +102,7 @@ export default function CreateAccount() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: {
       kategorija:          'TEKUCI',
       tip:                 'LICNI',

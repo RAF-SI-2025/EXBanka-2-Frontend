@@ -8,6 +8,7 @@ import { getAccountDetail, renameAccount, requestLimitChange, verifyLimitChange 
 import { getMyProfile } from '@/services/authService'
 import Dialog from '@/components/common/Dialog'
 import type { AccountDetail, MyProfile } from '@/types'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -46,6 +47,7 @@ function FieldRow({ label, value }: FieldRowProps) {
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const addNotification = useNotificationStore((s) => s.addNotification)
 
   const [account, setAccount] = useState<AccountDetail | null>(null)
   const [profile, setProfile] = useState<MyProfile | null>(null)
@@ -171,6 +173,7 @@ export default function AccountDetailPage() {
           mesecni_limit: pendingLimitValues.m >= 0 ? pendingLimitValues.m : prev.mesecni_limit,
         }
       })
+      addNotification('Limit naloga uspešno promenjen')
       setLimitWaitOpen(false)
       setPendingActionId(null)
       setPendingLimitValues(null)

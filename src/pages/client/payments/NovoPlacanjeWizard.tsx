@@ -8,6 +8,7 @@ import {
   getPaymentRecipients,
   createPaymentRecipient,
 } from '@/services/paymentService'
+import { useNotificationStore } from '@/store/useNotificationStore'
 import type { AccountListItem, AccountDetail, PaymentRecipient, CreatePaymentIntentResult } from '@/types'
 import { downloadPaymentReceipt } from '@/utils/pdfReceipt'
 
@@ -24,6 +25,7 @@ type Step = 'form' | 'verify' | 'done'
 export default function NovoPlacanjeWizard() {
   const navigate = useNavigate()
   const location = useLocation()
+  const addNotification = useNotificationStore((s) => s.addNotification)
 
   const [step, setStep] = useState<Step>('form')
 
@@ -159,6 +161,7 @@ export default function NovoPlacanjeWizard() {
       setCompletedPayment(done)
       setRecipientAdded(false)
       setAddRecipientError(null)
+      addNotification(`Plaćanje izvršeno — ${done.iznos.toLocaleString('sr-RS', { minimumFractionDigits: 2 })} ${done.valuta} → ${done.naziv_primaoca}`)
       setStep('done')
     } catch (err: unknown) {
       const e = err as Error & { grpcCode?: number }

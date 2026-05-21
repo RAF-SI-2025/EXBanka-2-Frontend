@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { User, ChevronDown, LogOut, Menu } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { getMyProfile } from '@/services/authService'
+import NotificationBell from './NotificationBell'
 
 interface HeaderProps {
   onMenuToggle: () => void
@@ -54,7 +55,11 @@ export default function Header({ onMenuToggle }: HeaderProps) {
       {/* Spacer for desktop (hamburger not shown) */}
       <div className="hidden md:block" />
 
-      {/* Right: user info + dropdown */}
+      {/* Right: notifications + user info */}
+      <div className="flex items-center gap-1">
+      <NotificationBell />
+
+      {/* User dropdown */}
       <div className="relative" ref={dropdownRef}>
         <button
           onClick={() => setDropdownOpen((v) => !v)}
@@ -90,6 +95,7 @@ export default function Header({ onMenuToggle }: HeaderProps) {
             </button>
           </div>
         )}
+      </div>
       </div>
     </header>
   )

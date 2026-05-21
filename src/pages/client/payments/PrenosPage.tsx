@@ -5,6 +5,7 @@ import { getClientAccounts, getExchangeRate, createExchangeTransferIntent } from
 import { createTransferIntent, verifyAndExecutePayment } from '@/services/paymentService'
 import type { AccountListItem, CreatePaymentIntentResult } from '@/types'
 import { downloadPaymentReceipt } from '@/utils/pdfReceipt'
+import { useNotificationStore } from '@/store/useNotificationStore'
 
 function formatAmount(amount: number, currency: string) {
   return `${amount.toLocaleString('sr-RS', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`
@@ -14,6 +15,7 @@ type Step = 'form' | 'confirm' | 'verify' | 'done'
 
 export default function PrenosPage() {
   const navigate = useNavigate()
+  const addNotification = useNotificationStore((s) => s.addNotification)
   const [step, setStep] = useState<Step>('form')
 
   const [accounts, setAccounts] = useState<AccountListItem[]>([])
@@ -152,6 +154,7 @@ export default function PrenosPage() {
     try {
       const done = await verifyAndExecutePayment(pendingIntent.intent_id, verifyCode)
       setCompletedPayment(done)
+      addNotification(`Prenos izvršen — ${done.iznos.toLocaleString('sr-RS', { minimumFractionDigits: 2 })} ${done.valuta}`)
       setStep('done')
     } catch (err: unknown) {
       const e = err as Error
