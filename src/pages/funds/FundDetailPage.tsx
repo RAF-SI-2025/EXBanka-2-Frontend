@@ -58,12 +58,16 @@ export default function FundDetailPage() {
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
-      <nav className="mb-4 text-sm text-gray-500">
-        <button className="hover:text-gray-700" onClick={() => navigate('/funds')}>
-          ← Fondovi
+      <nav className="mb-6 flex items-center gap-1 text-sm">
+        <button
+          className="flex items-center gap-1 text-primary-600 hover:text-primary-800 font-medium transition-colors"
+          onClick={() => navigate('/funds')}
+        >
+          <span className="text-base leading-none">←</span>
+          Fondovi
         </button>
-        <span className="mx-2">/</span>
-        <span className="text-gray-900">{activeFund.name}</span>
+        <span className="text-gray-400">/</span>
+        <span className="text-gray-700 font-medium">{activeFund.name}</span>
       </nav>
 
       <FundDetailView
