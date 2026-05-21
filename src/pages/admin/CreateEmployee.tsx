@@ -20,7 +20,11 @@ const schema = z.object({
   email: z.string().email('Unesite ispravan email'),
   phone: z
     .string()
-    .refine((v) => v === '' || /^\+?[0-9]+$/.test(v), 'Dozvoljen je samo + na početku i cifre'),
+    .min(1, 'Telefon je obavezan')
+    .refine(
+      (v) => /^\+?[0-9]{9,15}$/.test(v),
+      'Telefon mora imati 9–15 cifara (opciono + na početku)'
+    ),
   position: z.string().min(1, 'Pozicija je obavezna'),
   department: z.string().min(1, 'Departman je obavezan'),
   address: z.string().min(1, 'Adresa je obavezna'),
@@ -51,6 +55,7 @@ export default function CreateEmployee() {
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: { user_type: 'EMPLOYEE', is_active: true, permissions: [] },
   })
 

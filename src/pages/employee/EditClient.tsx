@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft } from 'lucide-react'
 
 import Button from '@/components/common/Button'
+import Dialog from '@/components/common/Dialog'
 import Input from '@/components/common/Input'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
@@ -52,10 +53,7 @@ export default function EditClient() {
     formState: { errors, isSubmitting, isDirty },
   } = useForm<FormValues>({ resolver: zodResolver(schema) })
 
-  useBlockNavigation(
-    isDirty && !isSubmitting,
-    'Imate nesačuvane izmene. Da li ste sigurni da želite da napustite stranicu?'
-  )
+  const blocker = useBlockNavigation(isDirty && !isSubmitting)
 
   useEffect(() => {
     if (!id) return
@@ -253,6 +251,25 @@ export default function EditClient() {
           </Button>
         </div>
       </form>
+
+      <Dialog
+        open={blocker.state === 'blocked'}
+        onClose={() => blocker.reset?.()}
+        title="Nesačuvane izmene"
+        maxWidth="sm"
+      >
+        <p className="text-gray-600 mb-6">
+          Imate nesačuvane izmene. Da li ste sigurni da želite da napustite stranicu?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={() => blocker.reset?.()}>
+            Ostani na stranici
+          </Button>
+          <Button type="button" variant="danger" onClick={() => blocker.proceed?.()}>
+            Napusti bez čuvanja
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }

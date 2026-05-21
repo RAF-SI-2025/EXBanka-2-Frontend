@@ -7,6 +7,7 @@ import toast from 'react-hot-toast'
 import { ArrowLeft, UserX, UserCheck } from 'lucide-react'
 
 import Button from '@/components/common/Button'
+import Dialog from '@/components/common/Dialog'
 import Input from '@/components/common/Input'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
@@ -22,7 +23,11 @@ const schema = z.object({
   email: z.string().email('Unesite ispravan email'),
   phone: z
     .string()
-    .refine((v) => v === '' || /^\+?[0-9]+$/.test(v), 'Dozvoljen je samo + na početku i cifre'),
+    .min(1, 'Telefon je obavezan')
+    .refine(
+      (v) => /^\+?[0-9]{9,15}$/.test(v),
+      'Telefon mora imati 9–15 cifara (opciono + na početku)'
+    ),
   position: z.string().min(1, 'Pozicija je obavezna'),
   department: z.string().min(1, 'Departman je obavezan'),
   address: z.string().min(1, 'Adresa je obavezna'),
@@ -58,10 +63,10 @@ export default function EditEmployee() {
     watch,
     setValue,
     formState: { errors, isSubmitting, isDirty },
-  } = useForm<FormValues>({ resolver: zodResolver(schema) })
+  } = useForm<FormValues>({ resolver: zodResolver(schema), mode: 'onTouched' })
 
   // Block navigation when there are unsaved changes
-  useBlockNavigation(isDirty && !isSubmitting, 'Imate nesačuvane izmene. Da li ste sigurni da želite da napustite stranicu?')
+  const blocker = useBlockNavigation(isDirty && !isSubmitting)
 
   useEffect(() => {
     if (!id) return
@@ -380,6 +385,25 @@ export default function EditEmployee() {
           </Button>
         </div>
       </form>
+
+      <Dialog
+        open={blocker.state === 'blocked'}
+        onClose={() => blocker.reset?.()}
+        title="Nesačuvane izmene"
+        maxWidth="sm"
+      >
+        <p className="text-gray-600 mb-6">
+          Imate nesačuvane izmene. Da li ste sigurni da želite da napustite stranicu?
+        </p>
+        <div className="flex justify-end gap-3">
+          <Button type="button" variant="secondary" onClick={() => blocker.reset?.()}>
+            Ostani na stranici
+          </Button>
+          <Button type="button" variant="danger" onClick={() => blocker.proceed?.()}>
+            Napusti bez čuvanja
+          </Button>
+        </div>
+      </Dialog>
     </div>
   )
 }

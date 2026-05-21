@@ -76,6 +76,7 @@ function mapHttpToGrpcCode(httpStatus: number): number {
     case 403: return GrpcStatus.PERMISSION_DENIED
     case 404: return GrpcStatus.NOT_FOUND
     case 409: return GrpcStatus.ALREADY_EXISTS
+    case 429: return GrpcStatus.RESOURCE_EXHAUSTED
     // 502: nginx/Vite proxy kad upstream (npr. bank-service) nije dostupan ili prekine vezu
     case 502: return GrpcStatus.UNAVAILABLE
     case 503: return GrpcStatus.UNAVAILABLE

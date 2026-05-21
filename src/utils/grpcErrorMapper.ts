@@ -30,6 +30,9 @@ export function mapGrpcError(code: number, _rawMessage?: string): MappedError {
     case GrpcStatus.PERMISSION_DENIED:
       message = 'Nemate ovlašćenja za ovu akciju.'
       break
+    case GrpcStatus.RESOURCE_EXHAUSTED:
+      message = 'Nalog je privremeno zaključan zbog previše neuspelih pokušaja prijave. Proverite email za link za resetovanje lozinke ili pokušajte ponovo za 10 minuta.'
+      break
     case GrpcStatus.NOT_FOUND:
       message = 'Traženi resurs nije pronađen.'
       break

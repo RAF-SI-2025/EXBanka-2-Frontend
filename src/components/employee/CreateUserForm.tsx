@@ -17,7 +17,8 @@ const schema = z.object({
   address:       z.string().min(1, 'Adresa je obavezna'),
   date_of_birth: z
     .string()
-    .refine((d) => d === '' || new Date(d) <= new Date(), 'Datum ne može biti u budućnosti'),
+    .min(1, 'Datum rodjenja je obavezan')
+    .refine((d) => new Date(d) <= new Date(), 'Datum rodjenja ne može biti u budućnosti'),
   gender: z.string(),
   phone: z
     .string()
@@ -44,6 +45,7 @@ export default function CreateUserForm({ onSuccess, onCancel }: CreateUserFormPr
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
+    mode: 'onTouched',
     defaultValues: {
       first_name: '', last_name: '', email: '',
       address: '', date_of_birth: '', gender: '', phone: '',
