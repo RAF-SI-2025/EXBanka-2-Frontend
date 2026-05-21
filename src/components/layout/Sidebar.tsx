@@ -170,14 +170,14 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Moji nalozi',
     to: '/hartije/my-orders',
     icon: <ListOrdered className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'ADMIN'],
     employeeNeedsActuary: true,
   },
   {
     label: 'Portfolio',
     to: '/portfolio',
     icon: <Banknote className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'ADMIN'],
     employeeNeedsActuary: true,
   },
 
@@ -186,7 +186,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'OTC Trgovina',
     to: '/otc/trade',
     icon: <Handshake className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'ADMIN'],
     permission: ['SUPERVISOR', 'AGENT'],
     end: true,
   },
@@ -195,7 +195,7 @@ const NAV_ITEMS: NavItem[] = [
     to: '/otc',
     icon: <FileText className="h-5 w-5" />,
     badge: <UnreadOffersBadge />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'ADMIN'],
     permission: ['SUPERVISOR', 'AGENT'],
     end: true,
   },
@@ -203,7 +203,7 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Fondovi',
     to: '/funds',
     icon: <PieChart className="h-5 w-5" />,
-    roles: ['EMPLOYEE'],
+    roles: ['EMPLOYEE', 'ADMIN'],
     end: true,
   },
 
@@ -259,7 +259,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }: SidebarProps) {
 
   const isClient = user?.userType === 'CLIENT'
   const isEmployee = user?.userType === 'EMPLOYEE'
-  const isSupervisor = user?.userType === 'EMPLOYEE' && hasPermission('SUPERVISOR')
+  const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
   const isOnPayments = location.pathname.startsWith('/client/payments')
   const isOnProfitBanke = location.pathname.startsWith('/bank/')
   const isOnKrediti = location.pathname.startsWith('/employee/credits')
