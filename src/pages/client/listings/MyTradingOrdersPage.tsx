@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { RefreshCw, Ban, ExternalLink, Clock } from 'lucide-react'
+import { RefreshCw, Ban, ExternalLink, Clock, Filter } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { listMyTradingOrders, cancelTradingOrder } from '@/services/tradingService'
-import type { TradingOrder, TradingOrderStatus } from '@/types'
+import type { ListingType, TradingOrder, TradingOrderStatus } from '@/types'
 import Button from '@/components/common/Button'
 import Dialog from '@/components/common/Dialog'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
@@ -183,6 +183,14 @@ function ActuaryPendingNote() {
   )
 }
 
+const LISTING_TYPE_OPTIONS: { label: string; value: ListingType | '' }[] = [
+  { label: 'Sve', value: '' },
+  { label: 'Akcije', value: 'STOCK' },
+  { label: 'Forex', value: 'FOREX' },
+  { label: 'Futures', value: 'FUTURE' },
+  { label: 'Opcije', value: 'OPTION' },
+]
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function MyTradingOrdersPage() {
@@ -191,6 +199,10 @@ export default function MyTradingOrdersPage() {
   const isActuary = user?.userType === 'EMPLOYEE'
   const [orders, setOrders] = useState<TradingOrder[]>([])
   const [statusFilter, setStatusFilter] = useState<TradingOrderStatus | ''>('')
+  const [typeFilter, setTypeFilter] = useState<ListingType | ''>('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -241,6 +253,15 @@ export default function MyTradingOrdersPage() {
     }
   }
 
+  const visibleOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (typeFilter && o.listingType !== typeFilter) return false
+      if (dateFrom && new Date(o.createdAt) < new Date(dateFrom)) return false
+      if (dateTo && new Date(o.createdAt) > new Date(dateTo + 'T23:59:59')) return false
+      return true
+    })
+  }, [orders, typeFilter, dateFrom, dateTo])
+
   if (user?.userType === 'CLIENT' && !canAccessTradingPortals) {
     return <Navigate to={hartijeListPath()} replace />
   }
@@ -255,15 +276,25 @@ export default function MyTradingOrdersPage() {
             Pregled i upravljanje vašim nalozima za hartije od vrednosti
           </p>
         </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          leftIcon={<RefreshCw className="h-4 w-4" />}
-          loading={loading}
-          onClick={fetchOrders}
-        >
-          Osveži
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<Filter className="h-4 w-4" />}
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            Filteri
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+            loading={loading}
+            onClick={fetchOrders}
+          >
+            Osveži
+          </Button>
+        </div>
       </div>
 
       {/* Status filter */}
@@ -287,6 +318,57 @@ export default function MyTradingOrdersPage() {
         </div>
       </div>
 
+      {/* Additional filters (type + date) */}
+      {showFilters && (
+        <div className="bg-white rounded-xl shadow p-4 flex flex-wrap gap-6 items-end">
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Tip hartije</p>
+            <div className="flex gap-1 flex-wrap">
+              {LISTING_TYPE_OPTIONS.map(({ label, value }) => (
+                <button
+                  key={value}
+                  onClick={() => setTypeFilter(value)}
+                  className={[
+                    'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors',
+                    typeFilter === value
+                      ? 'bg-primary-700 text-white'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200',
+                  ].join(' ')}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Datum od</p>
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-primary-500"
+            />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-gray-500 mb-1.5 uppercase tracking-wide">Datum do</p>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-primary-500"
+            />
+          </div>
+          {(typeFilter || dateFrom || dateTo) && (
+            <button
+              onClick={() => { setTypeFilter(''); setDateFrom(''); setDateTo('') }}
+              className="text-sm text-gray-400 hover:text-gray-700 underline"
+            >
+              Resetuj filtere
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Table */}
       <div className="bg-white rounded-xl shadow overflow-hidden">
         {loading && orders.length === 0 ? (
@@ -295,7 +377,7 @@ export default function MyTradingOrdersPage() {
           </div>
         ) : error && orders.length === 0 ? (
           <div className="text-center py-16 text-red-600 text-sm">{error}</div>
-        ) : orders.length === 0 ? (
+        ) : visibleOrders.length === 0 ? (
           <div className="text-center py-16 space-y-2">
             <p className="text-gray-400 text-sm">Nemate naloga koji odgovaraju odabranom filteru.</p>
             <Link
@@ -313,20 +395,20 @@ export default function MyTradingOrdersPage() {
                   <tr className="border-b border-gray-200 bg-gray-50">
                     <Th>ID</Th>
                     <Th>Hartija</Th>
-                    <Th>Tip</Th>
+                    <Th>Tip naloga</Th>
                     <Th>Smer</Th>
                     <Th right>Količina</Th>
-                    <Th right>Kontr. vel.</Th>
                     <Th right>Cena / jed.</Th>
                     <Th right>Stop cena</Th>
                     <Th right>Popunjeno</Th>
+                    <Th right>Provizija</Th>
                     <Th>Status</Th>
                     <Th>Kreirano</Th>
                     <Th right>Akcije</Th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {orders.map((order) => {
+                  {visibleOrders.map((order) => {
                     const canCancel = order.status === 'PENDING' || order.status === 'APPROVED'
                     return (
                       <tr key={order.id} className="hover:bg-gray-50 transition-colors">
@@ -336,9 +418,14 @@ export default function MyTradingOrdersPage() {
                             to={hartijeDetailPath(order.listingId)}
                             className="inline-flex items-center gap-1 text-primary-700 hover:underline font-medium"
                           >
-                            {order.listingId}
-                            <ExternalLink className="h-3 w-3" />
+                            <span>{order.ticker ?? order.listingId}</span>
+                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
                           </Link>
+                          {order.listingType && (
+                            <span className="ml-1.5 rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-500 font-medium">
+                              {order.listingType}
+                            </span>
+                          )}
                         </Td>
                         <Td>
                           <span className="rounded bg-gray-100 px-1.5 py-0.5 text-xs font-mono font-medium text-gray-700">
@@ -349,7 +436,6 @@ export default function MyTradingOrdersPage() {
                           <DirectionBadge direction={order.direction} />
                         </Td>
                         <Td right>{order.quantity}</Td>
-                        <Td right>{order.contractSize}</Td>
                         <Td right mono>
                           {order.pricePerUnit
                             ? `$${parseFloat(order.pricePerUnit).toFixed(4)}`
@@ -375,6 +461,11 @@ export default function MyTradingOrdersPage() {
                               </>
                             )
                           })()}
+                        </Td>
+                        <Td right mono>
+                          {order.commission && parseFloat(order.commission) > 0
+                            ? `$${parseFloat(order.commission).toFixed(4)}`
+                            : '—'}
                         </Td>
                         <Td>
                           <div className="flex flex-col gap-1">
@@ -414,7 +505,7 @@ export default function MyTradingOrdersPage() {
               </table>
             </div>
             <div className="border-t border-gray-100 bg-gray-50 px-4 py-2 text-xs text-gray-400">
-              Prikazano {orders.length} naloga
+              Prikazano {visibleOrders.length} od {orders.length} naloga
             </div>
           </>
         )}

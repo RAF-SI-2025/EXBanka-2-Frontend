@@ -19,6 +19,10 @@ export function myTradingOrdersPath(): string {
   return `${HARTIJE_BASE}/my-orders`
 }
 
+export function watchlistPath(): string {
+  return '/watchlist'
+}
+
 export function supervisorOrdersPath(): string {
   return '/employee/trading/orders'
 }

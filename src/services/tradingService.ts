@@ -19,6 +19,8 @@ interface BackendTradingOrder {
   userId: string | number
   accountId: string | number
   listingId: string | number
+  ticker?: string
+  listingType?: string
   orderType: string
   direction: string
   quantity: number
@@ -32,6 +34,7 @@ interface BackendTradingOrder {
   afterHours: boolean
   allOrNone: boolean
   margin: boolean
+  commission?: string
   lastModified: string
   createdAt: string
 }
@@ -49,6 +52,8 @@ function mapOrder(o: BackendTradingOrder): TradingOrder {
     userId:            String(o.userId),
     accountId:         String(o.accountId),
     listingId:         String(o.listingId),
+    ticker:            o.ticker,
+    listingType:       o.listingType as TradingOrder['listingType'],
     orderType:         o.orderType as TradingOrder['orderType'],
     direction:         o.direction as TradingOrder['direction'],
     quantity:          o.quantity,
@@ -62,6 +67,7 @@ function mapOrder(o: BackendTradingOrder): TradingOrder {
     afterHours:        o.afterHours,
     allOrNone:         o.allOrNone,
     margin:            o.margin,
+    commission:        o.commission,
     lastModified:      o.lastModified,
     createdAt:         o.createdAt,
   }

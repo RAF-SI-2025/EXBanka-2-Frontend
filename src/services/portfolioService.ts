@@ -4,6 +4,7 @@
  */
 
 import { apiGet, apiPost } from './grpcClient'
+import type { DividendPayout } from '@/types'
 
 // ─── Portfolio ────────────────────────────────────────────────────────────────
 
@@ -159,4 +160,9 @@ export async function withdrawFromFund(
   withdrawAll: boolean
 ): Promise<void> {
   await apiPost(`/bank/funds/${fundId}/withdraw`, { accountId, amountRsd, withdrawAll })
+}
+
+export async function getDividendPayouts(): Promise<DividendPayout[]> {
+  const res = await apiGet<{ dividends: DividendPayout[] | null }>('/bank/portfolio/dividends')
+  return res.dividends ?? []
 }
