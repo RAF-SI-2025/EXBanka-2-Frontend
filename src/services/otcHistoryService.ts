@@ -40,9 +40,9 @@ const RAW_BASE = (import.meta.env as Record<string, string | undefined>).VITE_AP
 const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
 
 async function apiFetch<T>(path: string): Promise<T> {
-  const token = useAuthStore.getState().token
+  const { accessToken } = useAuthStore.getState()
   const res = await fetch(`${API_BASE}${path}`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {},
   })
   if (!res.ok) {
     const body = await res.json().catch(() => ({}))
