@@ -24,6 +24,9 @@ import {
   Handshake,
   PieChart,
   Wallet,
+  Bookmark,
+  RefreshCw,
+  ScrollText,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
@@ -135,6 +138,13 @@ const NAV_ITEMS: NavItem[] = [
     permission: ['SUPERVISOR'],
   },
   {
+    label: 'Audit log',
+    to: '/employee/audit-log',
+    icon: <ClipboardList className="h-5 w-5" />,
+    roles: ['EMPLOYEE'],
+    permission: ['SUPERVISOR'],
+  },
+  {
     label: 'Upravljanje aktuarima',
     to: '/admin/actuaries',
     icon: <UserCheck className="h-5 w-5" />,
@@ -150,6 +160,12 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Porez Tracking',
     to: '/admin/trading/tax',
     icon: <Receipt className="h-5 w-5" />,
+    roles: ['ADMIN'],
+  },
+  {
+    label: 'Audit log',
+    to: '/admin/audit-log',
+    icon: <ClipboardList className="h-5 w-5" />,
     roles: ['ADMIN'],
   },
   {
@@ -180,6 +196,20 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE', 'ADMIN'],
     employeeNeedsActuary: true,
   },
+  {
+    label: 'Trajni nalozi',
+    to: '/recurring-orders',
+    icon: <RefreshCw className="h-5 w-5" />,
+    roles: ['EMPLOYEE', 'ADMIN'],
+    employeeNeedsActuary: true,
+  },
+  {
+    label: 'Watchlist',
+    to: '/watchlist',
+    icon: <Bookmark className="h-5 w-5" />,
+    roles: ['EMPLOYEE', 'ADMIN'],
+    employeeNeedsActuary: true,
+  },
 
   // ── Celina 4 – EMPLOYEE ───────────────────────────────────────────────
   {
@@ -195,6 +225,14 @@ const NAV_ITEMS: NavItem[] = [
     to: '/otc',
     icon: <FileText className="h-5 w-5" />,
     badge: <UnreadOffersBadge />,
+    roles: ['EMPLOYEE', 'ADMIN'],
+    permission: ['SUPERVISOR', 'AGENT'],
+    end: true,
+  },
+  {
+    label: 'Istorija pregovora',
+    to: '/otc/history',
+    icon: <ScrollText className="h-5 w-5" />,
     roles: ['EMPLOYEE', 'ADMIN'],
     permission: ['SUPERVISOR', 'AGENT'],
     end: true,
@@ -217,6 +255,8 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Berze',      to: '/client/exchanges',                          roles: ['CLIENT'] },
   { label: 'Hartije od vrednosti', to: '/hartije',           roles: ['CLIENT'], end: true },
   { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'], permission: 'TRADE_STOCKS' },
+  { label: 'Trajni nalozi',         to: '/recurring-orders',   roles: ['CLIENT'] },
+  { label: 'Watchlist',            to: '/watchlist',          roles: ['CLIENT'] },
   { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
   // ── Celina 4 – CLIENT ─────────────────────────────────────────────────
   { label: 'OTC Trgovina',          to: '/otc/trade', roles: ['CLIENT'], end: true },
@@ -227,6 +267,7 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['CLIENT'],
     end: true,
   },
+  { label: 'Istorija pregovora', to: '/otc/history', roles: ['CLIENT'], end: true },
   { label: 'Fondovi', to: '/funds', roles: ['CLIENT'], end: true },
 ]
 

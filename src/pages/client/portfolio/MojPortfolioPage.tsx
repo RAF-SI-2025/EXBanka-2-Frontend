@@ -24,10 +24,12 @@ import {
   getFunds,
   investInFund,
   withdrawFromFund,
+  getDividendPayouts,
   type HoldingItem,
   type ClientFund,
   type ManagedFund,
 } from '@/services/portfolioService'
+import type { DividendPayout } from '@/types'
 import { getClientAccounts } from '@/services/bankaService'
 import type { AccountListItem } from '@/types'
 
@@ -95,7 +97,7 @@ function isOptionInTheMoney(holding: HoldingItem): boolean {
 
 // ─── Tabs ────────────────────────────────────────────────────────────────────
 
-type Tab = 'holdings' | 'funds'
+type Tab = 'holdings' | 'funds' | 'dividends'
 
 // ─── Main page ────────────────────────────────────────────────────────────────
 
@@ -117,6 +119,10 @@ export default function MojPortfolioPage() {
   const [fundsLoading, setFundsLoading] = useState(false)
   const [clientFunds, setClientFunds] = useState<ClientFund[]>([])
   const [managedFunds, setManagedFunds] = useState<ManagedFund[]>([])
+
+  // Dividends state
+  const [dividendsLoading, setDividendsLoading] = useState(false)
+  const [dividends, setDividends] = useState<DividendPayout[]>([])
 
   // Dialogs
   const [publishDialog, setPublishDialog] = useState<{ holding: HoldingItem } | null>(null)
@@ -179,6 +185,18 @@ export default function MojPortfolioPage() {
       })
       .catch(() => { if (!cancelled) toast.error('Greška pri učitavanju fondova.') })
       .finally(() => { if (!cancelled) setFundsLoading(false) })
+    return () => { cancelled = true }
+  }, [tab])
+
+  // Load dividends when tab switches
+  useEffect(() => {
+    if (tab !== 'dividends') return
+    let cancelled = false
+    setDividendsLoading(true)
+    getDividendPayouts()
+      .then((data) => { if (!cancelled) setDividends(data) })
+      .catch(() => { if (!cancelled) toast.error('Greška pri učitavanju dividendi.') })
+      .finally(() => { if (!cancelled) setDividendsLoading(false) })
     return () => { cancelled = true }
   }, [tab])
 
@@ -274,7 +292,7 @@ export default function MojPortfolioPage() {
 
       {/* Tab switcher */}
       <div className="flex gap-1 border-b border-gray-200">
-        {([['holdings', 'Hartije od vrednosti'], ['funds', 'Moji fondovi']] as [Tab, string][]).map(([key, label]) => (
+        {([['holdings', 'Hartije od vrednosti'], ['funds', 'Moji fondovi'], ['dividends', 'Dividende']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -587,6 +605,62 @@ export default function MojPortfolioPage() {
                 </div>
               )}
             </>
+          )}
+        </div>
+      )}
+
+      {/* ── TAB: Dividends ── */}
+      {tab === 'dividends' && (
+        <div className="bg-white rounded-xl shadow overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-primary-600" />
+            <h2 className="text-sm font-semibold text-gray-700">Istorija dividendi</h2>
+          </div>
+          {dividendsLoading ? (
+            <div className="flex justify-center py-16"><LoadingSpinner /></div>
+          ) : dividends.length === 0 ? (
+            <div className="text-center py-16 text-gray-400 text-sm">Nemate primljenih dividendi.</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full border-collapse">
+                <thead>
+                  <tr className="border-b border-gray-200 bg-gray-50">
+                    <Th>Ticker</Th>
+                    <Th right>Količina</Th>
+                    <Th right>Cena na dan</Th>
+                    <Th right>Bruto iznos</Th>
+                    <Th right>Porez (RSD)</Th>
+                    <Th right>Neto iznos</Th>
+                    <Th>Valuta</Th>
+                    <Th>Datum isplate</Th>
+                    <Th>Tip</Th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {dividends.map((d) => (
+                    <tr key={d.id} className="hover:bg-gray-50 transition-colors">
+                      <Td><span className="font-semibold text-gray-900">{d.ticker}</span></Td>
+                      <Td right mono>{d.quantity.toLocaleString()}</Td>
+                      <Td right mono>{d.priceOnDate.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 })}</Td>
+                      <Td right mono>{d.grossAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Td>
+                      <Td right mono>{d.taxAmountRsd > 0 ? formatRSD(d.taxAmountRsd) : <span className="text-gray-300">—</span>}</Td>
+                      <Td right>
+                        <span className="font-semibold text-green-700">
+                          {d.netAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </Td>
+                      <Td><span className="text-xs font-mono text-gray-600">{d.currency}</span></Td>
+                      <Td><span className="text-xs text-gray-500">{new Date(d.paymentDate).toLocaleDateString('sr-RS')}</span></Td>
+                      <Td>
+                        <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${d.isActuary ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-700'}`}>
+                          {d.isActuary ? 'Aktuar' : 'Klijent'}
+                        </span>
+                      </Td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       )}

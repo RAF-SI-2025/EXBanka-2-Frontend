@@ -9,12 +9,15 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts'
-import { ArrowLeft, TrendingUp, TrendingDown, Clock } from 'lucide-react'
+import { ArrowLeft, TrendingUp, TrendingDown, Clock, Bell } from 'lucide-react'
 import { useListingsStore } from '@/store/useListingsStore'
 import { useAuthStore } from '@/store/authStore'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import ErrorMessage from '@/components/common/ErrorMessage'
 import OptionsExpiryApproach2 from './OptionsExpiryApproach2'
+import PriceAlertModal from '@/components/trading/PriceAlertModal'
+import PriceAlertList from '@/components/trading/PriceAlertList'
+import AddToWatchlistButton from '@/components/trading/AddToWatchlistButton'
 import { hartijeListPath, hartijeKupovinaPath } from '@/router/helpers'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
 
@@ -114,6 +117,8 @@ export default function ListingDetailsPage() {
     (user?.userType === 'EMPLOYEE' && canAccessTradingPortals) ||
     (user?.userType === 'CLIENT' && canAccessTradingPortals)
   const [activePeriod, setActivePeriod] = useState(30)
+  const [alertModalOpen, setAlertModalOpen] = useState(false)
+  const [alertListKey, setAlertListKey] = useState(0)
 
   const {
     selectedListing,
@@ -217,13 +222,25 @@ export default function ListingDetailsPage() {
               </div>
             )}
             {id && showBuyButton && (
-              <button
-                type="button"
-                onClick={() => navigate(hartijeKupovinaPath(id))}
-                className="mt-1 px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors"
-              >
-                Kupi
-              </button>
+              <div className="mt-1 flex items-center gap-2 flex-wrap">
+                <AddToWatchlistButton listingId={Number(id)} />
+                <button
+                  type="button"
+                  onClick={() => setAlertModalOpen(true)}
+                  className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 transition-colors"
+                  title="Postavi price alert"
+                >
+                  <Bell className="w-4 h-4" />
+                  Alert
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(hartijeKupovinaPath(id))}
+                  className="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm font-medium hover:bg-primary-700 transition-colors"
+                >
+                  Kupi
+                </button>
+              </div>
             )}
           </div>
         </div>
@@ -401,6 +418,25 @@ export default function ListingDetailsPage() {
         <OptionsExpiryApproach2
           underlying={base.ticker}
           stockPrice={base.price}
+        />
+      )}
+
+      {showBuyButton && (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center gap-2 mb-4">
+            <Bell className="w-4 h-4 text-gray-500" />
+            <h2 className="text-base font-semibold text-gray-900">Moji price alarmi</h2>
+          </div>
+          <PriceAlertList key={alertListKey} />
+        </div>
+      )}
+
+      {selectedListing && (
+        <PriceAlertModal
+          open={alertModalOpen}
+          onClose={() => setAlertModalOpen(false)}
+          listing={selectedListing}
+          onCreated={() => setAlertListKey((k) => k + 1)}
         />
       )}
     </div>

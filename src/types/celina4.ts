@@ -72,6 +72,14 @@ export interface ClientFundPosition {
   lastModifiedDate: string
 }
 
+export interface FundStats {
+  annualizedReturn: number    // CAGR, e.g. 0.12 = 12%
+  volatility: number          // annualised std-dev of monthly returns
+  maxDrawdown: number         // max peak-to-trough (positive fraction)
+  rewardToVariability: number // annualizedReturn / volatility
+  snapshotCount: number
+}
+
 export interface InvestmentFund {
   id: string
   name: string
@@ -87,6 +95,7 @@ export interface InvestmentFund {
   securities: FundSecurity[]
   positions: ClientFundPosition[]
   createdAt: string
+  stats?: FundStats | null
 }
 
 export interface ClientFundTransaction {

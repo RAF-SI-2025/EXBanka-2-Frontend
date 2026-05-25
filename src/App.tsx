@@ -63,7 +63,7 @@ import ListingsPage from '@/pages/client/listings/ListingsPage'
 import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
 import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
 import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
-
+import WatchlistPage from '@/pages/client/watchlist/WatchlistPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -72,6 +72,7 @@ import OTCTradingPage from '@/pages/otc/OTCTradingPage'
 import OTCCombinedPage from '@/pages/otc/OTCCombinedPage'
 import OTCOfferDetailPage from '@/pages/otc/OTCOfferDetailPage'
 import OTCContractDetailPage from '@/pages/otc/OTCContractDetailPage'
+import OTCNegotiationHistoryPage from '@/pages/otc/OTCNegotiationHistoryPage'
 
 // ── Interbank (si-tx-proto) ──────────────────────────────────────────────────
 import InterbankPaymentPage from '@/pages/client/payments/InterbankPaymentPage'
@@ -84,6 +85,8 @@ import CreateFundPage from '@/pages/funds/CreateFundPage'
 import FundInvestPage from '@/pages/funds/FundInvestPage'
 
 // ── Celina 4 – Banka ─────────────────────────────────────────────────────────
+import AuditLogPage from '@/pages/admin/AuditLogPage'
+import RecurringOrdersPage from '@/pages/client/RecurringOrdersPage'
 import ActuaryPerformancePage from '@/pages/bank/ActuaryPerformancePage'
 import BankFundPositionsPage from '@/pages/bank/BankFundPositionsPage'
 
@@ -125,6 +128,7 @@ const router = createBrowserRouter(
             <Route path="actuaries" element={<PermissionRoute permission="SUPERVISOR"><ActuaryManagement /></PermissionRoute>} />
             <Route path="trading/tax" element={<PermissionRoute permission="SUPERVISOR"><TaxTrackingPage /></PermissionRoute>} />
             <Route path="trading/orders" element={<PermissionRoute permission="SUPERVISOR"><SupervisorOrdersPage /></PermissionRoute>} />
+            <Route path="audit-log" element={<AuditLogPage />} />
           </Route>
 
           {/* Employee home */}
@@ -150,10 +154,25 @@ const router = createBrowserRouter(
             <Route path="exchanges" element={<ExchangesPage />} />
             <Route path="trading/tax" element={<PermissionRoute permission="SUPERVISOR"><TaxTrackingPage /></PermissionRoute>} />
             <Route path="trading/orders" element={<PermissionRoute permission="SUPERVISOR"><SupervisorOrdersPage /></PermissionRoute>} />
+            <Route path="audit-log" element={<PermissionRoute permission="SUPERVISOR"><AuditLogPage /></PermissionRoute>} />
           </Route>
 
           {/* Portfolio – klijenti i aktuari */}
           <Route path="/portfolio" element={<PortfolioRoute />} />
+
+          {/* Trajni nalozi – klijenti i aktuari */}
+          <Route path="/recurring-orders" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <RecurringOrdersPage />
+            </AllowedRolesRoute>
+          } />
+
+          {/* Watchlist – klijenti i aktuari */}
+          <Route path="/watchlist" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <WatchlistPage />
+            </AllowedRolesRoute>
+          } />
 
           {/* ── Celina 4 – OTC ──────────────────────────────────────────── */}
           <Route path="/otc/trade" element={
@@ -174,6 +193,11 @@ const router = createBrowserRouter(
           <Route path="/otc/contracts/:id" element={
             <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <OTCContractDetailPage />
+            </AllowedRolesRoute>
+          } />
+          <Route path="/otc/history" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <OTCNegotiationHistoryPage />
             </AllowedRolesRoute>
           } />
 

@@ -9,6 +9,10 @@ const SORT_OPTIONS = [
   { value: 'fundValue', label: 'Vrednost fonda' },
   { value: 'profit', label: 'Profit' },
   { value: 'minimumContribution', label: 'Min. uplata' },
+  { value: 'annualizedReturn', label: 'Godišnji prinos' },
+  { value: 'rewardToVariability', label: 'Prinos/Rizik' },
+  { value: 'maxDrawdown', label: 'Max drawdown' },
+  { value: 'volatility', label: 'Volatilnost' },
 ]
 
 export default function FundsDiscoveryPage() {

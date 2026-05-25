@@ -134,6 +134,43 @@ export default function FundDetailView({ fund, userRole, investAccounts = [], re
         </div>
       </div>
 
+      {/* ── Performance statistics ───────────────────────────── */}
+      {fund.stats ? (
+        <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-400">Statistika performansi</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <PerfStat
+              label="God. prinos (CAGR)"
+              value={`${(fund.stats.annualizedReturn * 100).toFixed(2)}%`}
+              sub={`${fund.stats.snapshotCount} snimaka`}
+              color={fund.stats.annualizedReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}
+            />
+            <PerfStat
+              label="Prinos / Rizik"
+              value={fund.stats.rewardToVariability.toFixed(3)}
+              sub="viši = bolji"
+              color={fund.stats.rewardToVariability >= 1 ? 'text-emerald-600' : fund.stats.rewardToVariability >= 0 ? 'text-amber-600' : 'text-red-500'}
+            />
+            <PerfStat
+              label="Max drawdown"
+              value={`${(fund.stats.maxDrawdown * 100).toFixed(2)}%`}
+              sub="pad od vrha"
+              color="text-amber-600"
+            />
+            <PerfStat
+              label="Volatilnost"
+              value={`${(fund.stats.volatility * 100).toFixed(2)}%`}
+              sub="god. std. devijacija"
+              color="text-gray-700"
+            />
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl border border-dashed border-gray-200 bg-gray-50 p-5 text-center text-sm text-gray-400">
+          Nedovoljno istorijskih podataka za prikaz statistike (potrebno min. 3 snimka).
+        </div>
+      )}
+
       {/* ── Performance chart ────────────────────────────────── */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
         <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-400">Performanse</h2>
@@ -194,6 +231,21 @@ function StatCard({ label, value, icon, accent, valueColor }: {
       </div>
       <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{label}</p>
       <p className={`mt-1 text-lg font-bold ${valueColor ?? 'text-gray-900'}`}>{value}</p>
+    </div>
+  )
+}
+
+function PerfStat({ label, value, sub, color }: {
+  label: string
+  value: string
+  sub: string
+  color: string
+}) {
+  return (
+    <div className="rounded-xl bg-gray-50 px-4 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+      <p className={`mt-1 text-xl font-bold tabular-nums ${color}`}>{value}</p>
+      <p className="mt-0.5 text-[10px] text-gray-400">{sub}</p>
     </div>
   )
 }

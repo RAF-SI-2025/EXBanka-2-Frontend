@@ -464,6 +464,8 @@ export interface TradingOrder {
   userId: string
   accountId: string
   listingId: string
+  ticker?: string
+  listingType?: ListingType
   orderType: TradingOrderType
   direction: TradingDirection
   quantity: number
@@ -478,6 +480,7 @@ export interface TradingOrder {
   afterHours: boolean
   allOrNone: boolean
   margin: boolean
+  commission?: string
   lastModified: string    // ISO 8601
   createdAt: string       // ISO 8601
 }
@@ -567,4 +570,119 @@ export interface ListingsFilter {
   sortOrder?: 'ASC' | 'DESC'
   page?: number
   pageSize?: number
+}
+
+// ─── Price Alerts ─────────────────────────────────────────────────────────────
+
+export type PriceAlertDirection = 'ABOVE' | 'BELOW'
+
+export interface PriceAlert {
+  id: number
+  userId: number
+  listingId: number
+  ticker: string
+  threshold: number
+  direction: PriceAlertDirection
+  email: string
+  active: boolean
+  createdAt: string
+}
+
+export interface CreatePriceAlertRequest {
+  listingId: number
+  threshold: number
+  direction: PriceAlertDirection
+}
+
+// ─── Watchlist ────────────────────────────────────────────────────────────────
+
+export interface Watchlist {
+  id: number
+  userId: number
+  name: string
+  createdAt: string
+}
+
+export interface WatchlistItem {
+  watchlistId: number
+  listingId: number
+  ticker: string
+  name: string
+  listingType: ListingType
+  price: number
+  changePercent: number
+  addedAt: string
+}
+
+export interface WatchlistDetail extends Watchlist {
+  items: WatchlistItem[]
+}
+
+// ─── Audit Log ────────────────────────────────────────────────────────────────
+
+export type AuditAction =
+  | 'ORDER_APPROVED'
+  | 'ORDER_DECLINED'
+  | 'ORDER_CANCELED'
+  | 'AGENT_LIMIT_SET'
+  | 'AGENT_LIMIT_RESET'
+  | 'ACTUARY_CREATED'
+  | 'ACTUARY_DELETED'
+  | 'TAX_CALCULATED'
+  | 'PERMISSION_CHANGED'
+
+export interface AuditLogEntry {
+  id: number
+  action: AuditAction | string
+  actorId: number | null
+  targetId: number | null
+  details: Record<string, unknown>
+  createdAt: string
+}
+
+// ─── Recurring Orders (DCA) ───────────────────────────────────────────────────
+
+export type RecurringCadence = 'DAILY' | 'WEEKLY' | 'MONTHLY'
+export type RecurringMode = 'BYQUANTITY' | 'BYAMOUNT'
+
+export interface RecurringOrder {
+  id: number
+  userId: number
+  listingId: number
+  ticker: string
+  direction: TradingDirection
+  mode: RecurringMode
+  value: number
+  accountId: number
+  cadence: RecurringCadence
+  nextRun: string
+  active: boolean
+  createdAt: string
+}
+
+// ─── Dividend Payouts ─────────────────────────────────────────────────────────
+
+export interface DividendPayout {
+  id: number
+  listingId: number
+  ticker: string
+  quantity: number
+  priceOnDate: number
+  grossAmount: number
+  taxAmountRsd: number
+  netAmount: number
+  currency: string
+  paymentDate: string
+  isActuary: boolean
+}
+
+export interface CreateRecurringOrderRequest {
+  listingId: number
+  direction: TradingDirection
+  mode: RecurringMode
+  value: number
+  accountId: number
+  isClient: boolean
+  cadence: RecurringCadence
+  nextRun: string
 }

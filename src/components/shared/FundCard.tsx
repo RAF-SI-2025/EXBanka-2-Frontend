@@ -12,9 +12,12 @@ const fmtRSD = (v: number | null) =>
     ? '—'
     : new Intl.NumberFormat('sr-RS', { style: 'currency', currency: 'RSD', maximumFractionDigits: 0 }).format(v)
 
+const fmtPct = (v: number) => `${(v * 100).toFixed(2)}%`
+
 export default function FundCard({ fund, onClick, showInvestButton, onInvest }: FundCardProps) {
   const profitPositive = fund.profit !== null && fund.profit >= 0
   const hasProfit = fund.profit !== null
+  const s = fund.stats
 
   return (
     <div
@@ -36,7 +39,7 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
           )}
         </div>
 
-        {/* Stats */}
+        {/* Core stats */}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-xl bg-gray-50 px-3 py-2.5">
             <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">Vrednost</p>
@@ -59,6 +62,20 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
           </div>
         </div>
 
+        {/* Performance metrics */}
+        {s ? (
+          <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
+            <Metric label="God. prinos" value={fmtPct(s.annualizedReturn)} positive={s.annualizedReturn >= 0} />
+            <Metric label="Prinos/Rizik" value={s.rewardToVariability.toFixed(2)} positive={s.rewardToVariability >= 0} />
+            <Metric label="Max drawdown" value={fmtPct(s.maxDrawdown)} warn />
+            <Metric label="Volatilnost" value={fmtPct(s.volatility)} neutral />
+          </div>
+        ) : (
+          <p className="border-t border-gray-100 pt-3 text-center text-[10px] text-gray-400">
+            Nedovoljno istorijskih podataka za statistiku
+          </p>
+        )}
+
         {/* Invest button */}
         {showInvestButton && onInvest && (
           <button
@@ -69,6 +86,28 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
           </button>
         )}
       </div>
+    </div>
+  )
+}
+
+function Metric({ label, value, positive, warn, neutral }: {
+  label: string
+  value: string
+  positive?: boolean
+  warn?: boolean
+  neutral?: boolean
+}) {
+  const color = warn
+    ? 'text-amber-600'
+    : neutral
+      ? 'text-gray-700'
+      : positive
+        ? 'text-emerald-600'
+        : 'text-red-500'
+  return (
+    <div className="rounded-lg bg-gray-50 px-2.5 py-2">
+      <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+      <p className={`mt-0.5 text-xs font-bold ${color}`}>{value}</p>
     </div>
   )
 }

@@ -183,6 +183,8 @@ interface Celina4State {
   myPositionsLoading: boolean
   performanceData: FundPerformancePoint[]
   performanceLoading: boolean
+  avgPerformanceData: FundPerformancePoint[]
+  avgPerformanceLoading: boolean
   bankFundPositions: ClientFundPosition[]
   bankPositionsLoading: boolean
   actuaryPerformances: ActuaryPerformance[]
@@ -210,6 +212,7 @@ interface Celina4State {
   sellFundSecurity: (fundId: string, ticker: string) => Promise<void>
   fetchMyPositions: () => Promise<void>
   fetchFundPerformance: (id: string, period: 'monthly' | 'quarterly' | 'yearly') => Promise<void>
+  fetchAvgPerformance: (period: 'monthly' | 'quarterly' | 'yearly') => Promise<void>
   fetchActuaryPerformance: () => Promise<void>
   fetchBankFundPositions: () => Promise<void>
   setSagaStatus: (status: SagaStatus, message?: string) => void
@@ -236,6 +239,8 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
   myPositionsLoading: false,
   performanceData: [],
   performanceLoading: false,
+  avgPerformanceData: [],
+  avgPerformanceLoading: false,
   bankFundPositions: [],
   bankPositionsLoading: false,
   actuaryPerformances: [],
@@ -502,6 +507,16 @@ export const useCelina4Store = create<Celina4State>((set, get) => ({
       set({ performanceData: data, performanceLoading: false })
     } catch {
       set({ performanceLoading: false })
+    }
+  },
+
+  fetchAvgPerformance: async (period) => {
+    set({ avgPerformanceLoading: true })
+    try {
+      const { data } = await apiFetch<FundPerformancePoint[]>(`/api/bank/investment-funds/average-performance?period=${period}`)
+      set({ avgPerformanceData: data, avgPerformanceLoading: false })
+    } catch {
+      set({ avgPerformanceLoading: false })
     }
   },
 

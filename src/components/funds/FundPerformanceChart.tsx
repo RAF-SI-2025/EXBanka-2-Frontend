@@ -24,11 +24,20 @@ const fmtRSD = (v: number) =>
 
 export default function FundPerformanceChart({ fundId, performanceData, isLoading }: FundPerformanceChartProps) {
   const [period, setPeriod] = useState<Period>('monthly')
-  const fetchFundPerformance = useCelina4Store(s => s.fetchFundPerformance)
+  const { fetchFundPerformance, fetchAvgPerformance, avgPerformanceData, avgPerformanceLoading } = useCelina4Store()
 
   useEffect(() => {
     fetchFundPerformance(fundId, period)
-  }, [fundId, period, fetchFundPerformance])
+    fetchAvgPerformance(period)
+  }, [fundId, period, fetchFundPerformance, fetchAvgPerformance])
+
+  // Merge fund data with average data by period key
+  const merged = performanceData.map(pt => {
+    const avg = avgPerformanceData.find(a => a.period === pt.period)
+    return { period: pt.period, value: pt.value, avg: avg?.value ?? null }
+  })
+
+  const loading = isLoading || avgPerformanceLoading
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white p-5">
@@ -51,7 +60,7 @@ export default function FundPerformanceChart({ fundId, performanceData, isLoadin
         </div>
       </div>
 
-      {isLoading ? (
+      {loading ? (
         <div className="flex h-48 items-center justify-center">
           <div className="h-8 w-8 animate-spin rounded-full border-4 border-blue-600 border-t-transparent" />
         </div>
@@ -61,11 +70,11 @@ export default function FundPerformanceChart({ fundId, performanceData, isLoadin
         </p>
       ) : (
         <ResponsiveContainer width="100%" height={220}>
-          <LineChart data={performanceData} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
+          <LineChart data={merged} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="period" tick={{ fontSize: 11 }} />
             <YAxis tickFormatter={v => `${(v / 1_000_000).toFixed(1)}M`} tick={{ fontSize: 11 }} />
-            <Tooltip formatter={(v: number) => [fmtRSD(v), 'Vrednost']} />
+            <Tooltip formatter={(v: number) => [fmtRSD(v)]} />
             <Legend />
             <Line
               type="monotone"
@@ -75,6 +84,16 @@ export default function FundPerformanceChart({ fundId, performanceData, isLoadin
               strokeWidth={2}
               dot={{ r: 3 }}
               activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="avg"
+              name="Prosek svih fondova"
+              stroke="#94a3b8"
+              strokeWidth={1.5}
+              strokeDasharray="4 3"
+              dot={false}
+              connectNulls
             />
           </LineChart>
         </ResponsiveContainer>
