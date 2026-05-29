@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Bookmark, Plus, Trash2, ExternalLink, TrendingUp, TrendingDown, Search } from 'lucide-react'
+import { Bookmark, Plus, Trash2, ExternalLink, TrendingUp, TrendingDown, Search, Bell, Pencil, Check, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import {
   listWatchlists,
   createWatchlist,
   deleteWatchlist,
+  renameWatchlist,
   getWatchlist,
   removeFromWatchlist,
 } from '@/services/watchlistService'
-import type { ListingType, Watchlist, WatchlistDetail, WatchlistItem } from '@/types'
+import type { ListingDetail, ListingType, Watchlist, WatchlistDetail, WatchlistItem } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
 import { hartijeDetailPath } from '@/router/helpers'
+import PriceAlertModal from '@/components/trading/PriceAlertModal'
 
 const LISTING_TYPE_LABELS: Record<ListingType, string> = {
   STOCK: 'Akcija',
@@ -34,7 +36,15 @@ function ListingTypeBadge({ type }: { type: ListingType }) {
   )
 }
 
-function WatchlistItemRow({ item, onRemove }: { item: WatchlistItem; onRemove: () => void }) {
+function WatchlistItemRow({
+  item,
+  onRemove,
+  onSetAlert,
+}: {
+  item: WatchlistItem
+  onRemove: () => void
+  onSetAlert: () => void
+}) {
   const isPositive = item.changePercent >= 0
   return (
     <div className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-gray-50 transition-colors">
@@ -58,6 +68,13 @@ function WatchlistItemRow({ item, onRemove }: { item: WatchlistItem; onRemove: (
           {isPositive ? '+' : ''}{item.changePercent.toFixed(2)}%
         </span>
         <button
+          onClick={onSetAlert}
+          className="text-gray-300 hover:text-blue-500 transition-colors"
+          title="Postavi price alert"
+        >
+          <Bell className="h-4 w-4" />
+        </button>
+        <button
           onClick={onRemove}
           className="text-gray-300 hover:text-red-500 transition-colors"
           title="Ukloni iz watchliste"
@@ -67,6 +84,30 @@ function WatchlistItemRow({ item, onRemove }: { item: WatchlistItem; onRemove: (
       </div>
     </div>
   )
+}
+
+function watchlistItemToListingDetail(item: WatchlistItem): ListingDetail {
+  return {
+    base: {
+      id: String(item.listingId),
+      ticker: item.ticker,
+      name: item.name,
+      listingType: item.listingType,
+      exchangeId: '',
+      price: item.price,
+      ask: item.price,
+      bid: item.price,
+      volume: '0',
+      changePercent: item.changePercent,
+      dollarVolume: 0,
+      initialMarginCost: 0,
+      lastRefresh: '',
+    },
+    nominalValue: 0,
+    contractSize: 0,
+    maintenanceMargin: 0,
+    detailsJson: '',
+  }
 }
 
 export default function WatchlistPage() {
@@ -80,6 +121,10 @@ export default function WatchlistPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [search, setSearch] = useState('')
   const [typeFilter, setTypeFilter] = useState<ListingType | ''>('')
+  const [alertItem, setAlertItem] = useState<WatchlistItem | null>(null)
+  const [renamingId, setRenamingId] = useState<number | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const [renaming, setRenaming] = useState(false)
 
   useEffect(() => {
     listWatchlists()
@@ -140,6 +185,35 @@ export default function WatchlistPage() {
     } catch {
       toast.error('Greška pri uklanjanju hartije.')
     }
+  }
+
+  function startRename(wl: Watchlist, e: React.MouseEvent) {
+    e.stopPropagation()
+    setRenamingId(wl.id)
+    setRenameValue(wl.name)
+  }
+
+  async function handleRenameConfirm(id: number) {
+    const trimmed = renameValue.trim()
+    if (!trimmed) return
+    setRenaming(true)
+    try {
+      const updated = await renameWatchlist(id, trimmed)
+      setWatchlists((prev) => prev.map((w) => w.id === id ? { ...w, name: updated.name } : w))
+      if (detail && detail.id === id) setDetail((prev) => prev ? { ...prev, name: updated.name } : prev)
+      toast.success(`Watchlista preimenovana u "${updated.name}".`)
+    } catch {
+      toast.error('Greška pri preimenovanju watchliste.')
+    } finally {
+      setRenaming(false)
+      setRenamingId(null)
+    }
+  }
+
+  function cancelRename(e?: React.MouseEvent) {
+    e?.stopPropagation()
+    setRenamingId(null)
+    setRenameValue('')
   }
 
   const visibleItems = (detail?.items ?? []).filter((item) => {
@@ -210,24 +284,71 @@ export default function WatchlistPage() {
             {watchlists.map((wl) => (
               <div
                 key={wl.id}
-                className={`flex items-center justify-between rounded-lg px-3 py-2.5 cursor-pointer transition-colors group ${
-                  selectedId === wl.id
-                    ? 'bg-primary-50 text-primary-800'
-                    : 'hover:bg-gray-100 text-gray-700'
+                className={`flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors group ${
+                  renamingId === wl.id
+                    ? 'bg-primary-50'
+                    : selectedId === wl.id
+                      ? 'bg-primary-50 text-primary-800 cursor-pointer'
+                      : 'hover:bg-gray-100 text-gray-700 cursor-pointer'
                 }`}
-                onClick={() => setSelectedId(wl.id)}
+                onClick={() => renamingId !== wl.id && setSelectedId(wl.id)}
               >
-                <div className="flex items-center gap-2 min-w-0">
-                  <Bookmark className={`h-4 w-4 flex-shrink-0 ${selectedId === wl.id ? 'text-primary-600' : 'text-gray-400'}`} />
-                  <span className="text-sm font-medium truncate">{wl.name}</span>
-                </div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleDeleteList(wl.id) }}
-                  className="opacity-0 group-hover:opacity-100 text-gray-300 hover:text-red-500 transition-all"
-                  title="Obriši listu"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                {renamingId === wl.id ? (
+                  <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={renameValue}
+                      onChange={(e) => setRenameValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') handleRenameConfirm(wl.id)
+                        if (e.key === 'Escape') cancelRename()
+                      }}
+                      className="flex-1 min-w-0 rounded border border-primary-400 px-1.5 py-0.5 text-sm focus:outline-none"
+                      maxLength={100}
+                      disabled={renaming}
+                    />
+                    <button
+                      onClick={() => handleRenameConfirm(wl.id)}
+                      disabled={renaming || !renameValue.trim()}
+                      className="text-green-600 hover:text-green-700 disabled:opacity-40"
+                      title="Potvrdi"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={cancelRename}
+                      disabled={renaming}
+                      className="text-gray-400 hover:text-gray-600"
+                      title="Otkaži"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Bookmark className={`h-4 w-4 flex-shrink-0 ${selectedId === wl.id ? 'text-primary-600' : 'text-gray-400'}`} />
+                      <span className="text-sm font-medium truncate">{wl.name}</span>
+                    </div>
+                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+                      <button
+                        onClick={(e) => startRename(wl, e)}
+                        className="text-gray-300 hover:text-primary-500"
+                        title="Preimenuj listu"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleDeleteList(wl.id) }}
+                        className="text-gray-300 hover:text-red-500"
+                        title="Obriši listu"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             ))}
           </div>
@@ -281,6 +402,7 @@ export default function WatchlistPage() {
                         key={item.listingId}
                         item={item}
                         onRemove={() => handleRemoveItem(item.listingId)}
+                        onSetAlert={() => setAlertItem(item)}
                       />
                     ))}
                   </div>
@@ -293,6 +415,14 @@ export default function WatchlistPage() {
             ) : null}
           </div>
         </div>
+      )}
+
+      {alertItem && (
+        <PriceAlertModal
+          open={true}
+          listing={watchlistItemToListingDetail(alertItem)}
+          onClose={() => setAlertItem(null)}
+        />
       )}
     </div>
   )

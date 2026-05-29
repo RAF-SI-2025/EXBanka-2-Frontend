@@ -27,6 +27,7 @@ import {
   Bookmark,
   RefreshCw,
   ScrollText,
+  Bell,
 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useActuaryAccess } from '@/context/ActuaryAccessContext'
@@ -210,6 +211,13 @@ const NAV_ITEMS: NavItem[] = [
     roles: ['EMPLOYEE', 'ADMIN'],
     employeeNeedsActuary: true,
   },
+  {
+    label: 'Price Alarmi',
+    to: '/price-alerts',
+    icon: <Bell className="h-5 w-5" />,
+    roles: ['EMPLOYEE', 'ADMIN'],
+    employeeNeedsActuary: true,
+  },
 
   // ── Celina 4 – EMPLOYEE ───────────────────────────────────────────────
   {
@@ -257,6 +265,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Moji nalozi',          to: '/hartije/my-orders', roles: ['CLIENT'], permission: 'TRADE_STOCKS' },
   { label: 'Trajni nalozi',         to: '/recurring-orders',   roles: ['CLIENT'] },
   { label: 'Watchlist',            to: '/watchlist',          roles: ['CLIENT'] },
+  { label: 'Price Alarmi',         to: '/price-alerts',       roles: ['CLIENT'] },
   { label: 'Moj Portfolio',        to: '/portfolio',          roles: ['CLIENT'] },
   // ── Celina 4 – CLIENT ─────────────────────────────────────────────────
   { label: 'OTC Trgovina',          to: '/otc/trade', roles: ['CLIENT'], end: true },

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Bookmark, BookmarkCheck, Check, Plus } from 'lucide-react'
+import { Bookmark, BookmarkCheck, Check, Plus, X } from 'lucide-react'
 import { listWatchlists, addToWatchlist, createWatchlist } from '@/services/watchlistService'
 import type { Watchlist } from '@/types'
 import toast from 'react-hot-toast'
@@ -85,10 +85,10 @@ export default function AddToWatchlistButton({ listingId }: Props) {
       <button
         type="button"
         onClick={handleOpen}
-        className={`flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg border text-sm font-medium transition-colors ${
           anyAdded
             ? 'border-primary-300 bg-primary-50 text-primary-700 hover:bg-primary-100'
-            : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+            : 'border-gray-300 bg-white text-gray-700 hover:bg-gray-50'
         }`}
         title="Dodaj u watchlistu"
       >
@@ -97,66 +97,97 @@ export default function AddToWatchlistButton({ listingId }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-1 w-60 rounded-xl border border-gray-200 bg-white shadow-lg z-50 overflow-hidden">
-          <div className="px-3 py-2 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wide">
-            Dodaj u watchlistu
+        <div className="absolute right-0 mt-2 w-72 rounded-xl border border-gray-200 bg-white shadow-xl z-50 overflow-hidden">
+          {/* Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+            <div className="flex items-center gap-2">
+              <Bookmark className="h-4 w-4 text-primary-600" />
+              <span className="text-sm font-semibold text-gray-800">Dodaj u watchlistu</span>
+            </div>
+            <button
+              onClick={() => setOpen(false)}
+              className="text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
 
+          {/* List */}
           {loading ? (
-            <div className="px-4 py-3 text-sm text-gray-400">Učitavanje...</div>
+            <div className="px-4 py-6 text-sm text-gray-400 text-center">Učitavanje...</div>
           ) : watchlists.length === 0 ? (
-            <div className="px-4 py-3 text-sm text-gray-400">Nemate watchlisti.</div>
+            <div className="px-4 py-6 text-center">
+              <Bookmark className="h-8 w-8 text-gray-200 mx-auto mb-2" />
+              <p className="text-sm text-gray-500 font-medium">Nemate watchlisti</p>
+              <p className="text-xs text-gray-400 mt-1">Kreirajte prvu listu ispod</p>
+            </div>
           ) : (
-            <div className="max-h-48 overflow-y-auto">
+            <div className="max-h-52 overflow-y-auto">
               {watchlists.map((wl) => {
                 const isAdded = added.has(wl.id)
+                const isLoading = adding === wl.id
                 return (
                   <button
                     key={wl.id}
-                    onClick={() => !isAdded && handleAdd(wl.id)}
-                    disabled={adding === wl.id || isAdded}
-                    className={`w-full flex items-center justify-between px-3 py-2.5 text-sm transition-colors ${
+                    onClick={() => !isAdded && !isLoading && handleAdd(wl.id)}
+                    disabled={isLoading || isAdded}
+                    className={`w-full flex items-center gap-3 px-4 py-3 text-sm transition-colors ${
                       isAdded
-                        ? 'text-primary-700 bg-primary-50 cursor-default'
-                        : 'text-gray-700 hover:bg-gray-50'
+                        ? 'bg-primary-50 text-primary-700 cursor-default'
+                        : 'text-gray-700 hover:bg-gray-50 active:bg-gray-100'
                     }`}
                   >
-                    <span className="truncate">{wl.name}</span>
-                    {isAdded && <Check className="h-3.5 w-3.5 text-primary-600 flex-shrink-0" />}
-                    {adding === wl.id && <span className="text-xs text-gray-400">...</span>}
+                    <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                      isAdded ? 'bg-primary-100' : 'bg-gray-100'
+                    }`}>
+                      {isAdded
+                        ? <Check className="h-3.5 w-3.5 text-primary-600" />
+                        : isLoading
+                          ? <span className="h-3 w-3 rounded-full border-2 border-gray-300 border-t-primary-500 animate-spin" />
+                          : <Bookmark className="h-3.5 w-3.5 text-gray-400" />
+                      }
+                    </div>
+                    <span className="truncate font-medium">{wl.name}</span>
+                    {isAdded && (
+                      <span className="ml-auto text-xs text-primary-500 flex-shrink-0">Dodato</span>
+                    )}
                   </button>
                 )
               })}
             </div>
           )}
 
-          <div className="border-t border-gray-100 p-2">
+          {/* Footer: create new */}
+          <div className="border-t border-gray-100 p-3">
             {showNew ? (
-              <div className="flex gap-1">
+              <div className="flex gap-2">
                 <input
                   autoFocus
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
-                  placeholder="Naziv..."
-                  className="flex-1 rounded border border-gray-300 px-2 py-1 text-xs focus:outline-none focus:border-primary-500"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreate()
+                    if (e.key === 'Escape') { setShowNew(false); setNewName('') }
+                  }}
+                  placeholder="Naziv liste..."
+                  className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-200"
                   maxLength={100}
                 />
                 <button
                   onClick={handleCreate}
                   disabled={creating || !newName.trim()}
-                  className="rounded bg-primary-600 px-2 py-1 text-xs text-white hover:bg-primary-700 disabled:opacity-50"
+                  className="rounded-lg bg-primary-600 px-3 py-1.5 text-sm text-white font-medium hover:bg-primary-700 disabled:opacity-50 transition-colors"
                 >
-                  {creating ? '...' : 'OK'}
+                  {creating ? '...' : 'Kreiraj'}
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setShowNew(true)}
-                className="flex w-full items-center gap-1.5 rounded px-2 py-1.5 text-xs text-gray-600 hover:bg-gray-100 transition-colors"
+                className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-primary-600 font-medium hover:bg-primary-50 transition-colors"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-4 w-4" />
                 Nova watchlista
               </button>
             )}

@@ -404,6 +404,7 @@ export default function MyTradingOrdersPage() {
                     <Th right>Provizija</Th>
                     <Th>Status</Th>
                     <Th>Kreirano</Th>
+                    <Th>Izvršeno</Th>
                     <Th right>Akcije</Th>
                   </tr>
                 </thead>
@@ -414,17 +415,22 @@ export default function MyTradingOrdersPage() {
                       <tr key={order.id} className="hover:bg-gray-50 transition-colors">
                         <Td mono>#{order.id}</Td>
                         <Td>
-                          <Link
-                            to={hartijeDetailPath(order.listingId)}
-                            className="inline-flex items-center gap-1 text-primary-700 hover:underline font-medium"
-                          >
-                            <span>{order.ticker ?? order.listingId}</span>
-                            <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                          </Link>
-                          {order.listingType && (
-                            <span className="ml-1.5 rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-500 font-medium">
-                              {order.listingType}
-                            </span>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <Link
+                              to={hartijeDetailPath(order.listingId)}
+                              className="inline-flex items-center gap-1 text-primary-700 hover:underline font-medium"
+                            >
+                              <span>{order.ticker ?? order.listingId}</span>
+                              <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                            </Link>
+                            {order.listingType && (
+                              <span className="rounded bg-gray-100 px-1 py-0.5 text-xs text-gray-500 font-medium">
+                                {order.listingType}
+                              </span>
+                            )}
+                          </div>
+                          {order.name && (
+                            <p className="text-xs text-gray-400 mt-0.5 max-w-[180px] truncate">{order.name}</p>
                           )}
                         </Td>
                         <Td>
@@ -483,6 +489,18 @@ export default function MyTradingOrdersPage() {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
+                        </Td>
+                        <Td>
+                          {order.status === 'DONE'
+                            ? new Date(order.lastModified).toLocaleString('sr-RS', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })
+                            : <span className="text-gray-300">—</span>
+                          }
                         </Td>
                         <Td right>
                           {canCancel ? (

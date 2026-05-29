@@ -40,7 +40,7 @@ export default function FundPerformanceChart({ fundId, performanceData, isLoadin
   const loading = isLoading || avgPerformanceLoading
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-5">
+    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-base font-semibold text-gray-900">Performanse fonda</h3>
         <div className="flex gap-1 rounded-lg border border-gray-200 p-0.5">

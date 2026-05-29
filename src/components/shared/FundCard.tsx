@@ -14,6 +14,13 @@ const fmtRSD = (v: number | null) =>
 
 const fmtPct = (v: number) => `${(v * 100).toFixed(2)}%`
 
+const METRIC_TOOLTIPS: Record<string, string> = {
+  return:     'Godišnji prinos (CAGR) — prosečan godišnji rast vrednosti fonda',
+  rv:         'Reward-to-variability — odnos prinosa i rizika; viši je bolji (iznad 1 se smatra dobrim)',
+  drawdown:   'Max drawdown — najveći pad od vrha do dna; niži znači manji rizik',
+  volatility: 'Volatilnost — standardna devijacija mesečnih prinosa; niža = stabilniji fond',
+}
+
 export default function FundCard({ fund, onClick, showInvestButton, onInvest }: FundCardProps) {
   const profitPositive = fund.profit !== null && fund.profit >= 0
   const hasProfit = fund.profit !== null
@@ -65,10 +72,30 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
         {/* Performance metrics */}
         {s ? (
           <div className="grid grid-cols-2 gap-2 border-t border-gray-100 pt-3">
-            <Metric label="God. prinos" value={fmtPct(s.annualizedReturn)} positive={s.annualizedReturn >= 0} />
-            <Metric label="Prinos/Rizik" value={s.rewardToVariability.toFixed(2)} positive={s.rewardToVariability >= 0} />
-            <Metric label="Max drawdown" value={fmtPct(s.maxDrawdown)} warn />
-            <Metric label="Volatilnost" value={fmtPct(s.volatility)} neutral />
+            <Metric
+              label="God. prinos"
+              value={fmtPct(s.annualizedReturn)}
+              color={s.annualizedReturn >= 0 ? 'text-emerald-600' : 'text-red-500'}
+              title={METRIC_TOOLTIPS.return}
+            />
+            <Metric
+              label="Prinos / Rizik"
+              value={s.rewardToVariability.toFixed(2)}
+              color={s.rewardToVariability >= 1 ? 'text-emerald-600' : s.rewardToVariability >= 0 ? 'text-amber-600' : 'text-red-500'}
+              title={METRIC_TOOLTIPS.rv}
+            />
+            <Metric
+              label="Max drawdown"
+              value={fmtPct(s.maxDrawdown)}
+              color="text-amber-600"
+              title={METRIC_TOOLTIPS.drawdown}
+            />
+            <Metric
+              label="Volatilnost"
+              value={fmtPct(s.volatility)}
+              color="text-gray-700"
+              title={METRIC_TOOLTIPS.volatility}
+            />
           </div>
         ) : (
           <p className="border-t border-gray-100 pt-3 text-center text-[10px] text-gray-400">
@@ -90,24 +117,16 @@ export default function FundCard({ fund, onClick, showInvestButton, onInvest }: 
   )
 }
 
-function Metric({ label, value, positive, warn, neutral }: {
+function Metric({ label, value, color, title }: {
   label: string
   value: string
-  positive?: boolean
-  warn?: boolean
-  neutral?: boolean
+  color: string
+  title: string
 }) {
-  const color = warn
-    ? 'text-amber-600'
-    : neutral
-      ? 'text-gray-700'
-      : positive
-        ? 'text-emerald-600'
-        : 'text-red-500'
   return (
-    <div className="rounded-lg bg-gray-50 px-2.5 py-2">
-      <p className="text-[9px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
-      <p className={`mt-0.5 text-xs font-bold ${color}`}>{value}</p>
+    <div className="rounded-lg bg-gray-50 px-2.5 py-2" title={title}>
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400">{label}</p>
+      <p className={`mt-0.5 text-xs font-bold tabular-nums ${color}`}>{value}</p>
     </div>
   )
 }

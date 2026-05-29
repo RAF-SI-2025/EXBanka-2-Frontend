@@ -190,7 +190,7 @@ export default function ListingDetailsPage() {
           </div>
 
           <div className="text-right flex flex-col items-end gap-2">
-            <p className="text-3xl font-bold text-gray-900">${base.price.toFixed(4)}</p>
+            <p className="text-3xl font-bold text-gray-900">${(base.price ?? 0).toFixed(4)}</p>
             <div
               className={`flex items-center justify-end gap-1 mt-1 ${
                 isPositive ? 'text-green-600' : 'text-red-500'
@@ -203,7 +203,7 @@ export default function ListingDetailsPage() {
               )}
               <span className="text-sm font-semibold">
                 {isPositive ? '+' : ''}
-                {base.changePercent.toFixed(2)}%
+                {(base.changePercent ?? 0).toFixed(2)}%
               </span>
             </div>
             {base.lastRefresh && (
@@ -249,11 +249,11 @@ export default function ListingDetailsPage() {
         <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-4 border-t border-gray-100 pt-4">
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Bid</p>
-            <p className="text-base font-semibold text-gray-800">${base.bid.toFixed(4)}</p>
+            <p className="text-base font-semibold text-gray-800">${(base.bid ?? 0).toFixed(4)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Ask</p>
-            <p className="text-base font-semibold text-gray-800">${base.ask.toFixed(4)}</p>
+            <p className="text-base font-semibold text-gray-800">${(base.ask ?? 0).toFixed(4)}</p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Dollar Volume</p>
@@ -280,13 +280,13 @@ export default function ListingDetailsPage() {
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Maintenance Margin</p>
             <p className="text-base font-semibold text-gray-800">
-              ${selectedListing.maintenanceMargin.toFixed(2)}
+              ${(selectedListing.maintenanceMargin ?? 0).toFixed(2)}
             </p>
           </div>
           <div>
             <p className="text-xs text-gray-400 uppercase tracking-wide">Initial Margin Cost</p>
             <p className="text-base font-semibold text-gray-800">
-              ${base.initialMarginCost.toFixed(2)}
+              ${(base.initialMarginCost ?? 0).toFixed(2)}
             </p>
           </div>
         </div>
@@ -398,7 +398,7 @@ export default function ListingDetailsPage() {
                           {formatChartDate(row.date, activePeriod)}
                         </td>
                         <td className="px-3 py-1.5 text-right font-mono tabular-nums">
-                          ${row.price.toFixed(4)}
+                          ${(row.price ?? 0).toFixed(4)}
                         </td>
                         <td className="px-3 py-1.5 text-right text-gray-600 tabular-nums">
                           {row.volume ? Number(row.volume).toLocaleString('sr-RS') : '—'}

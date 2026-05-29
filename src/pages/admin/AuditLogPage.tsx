@@ -50,6 +50,29 @@ function DetailsCell({ details }: { details: Record<string, unknown> }) {
   )
 }
 
+function ActorCell({ entry }: { entry: AuditLogEntry }) {
+  if (entry.actorId == null) return <span className="text-gray-400">—</span>
+  if (entry.actorName) {
+    return (
+      <div>
+        <span className="text-sm text-gray-800 font-medium">{entry.actorName}</span>
+        {entry.actorEmail && (
+          <div className="text-xs text-gray-400 mt-0.5">{entry.actorEmail}</div>
+        )}
+      </div>
+    )
+  }
+  return <span className="font-mono text-xs text-gray-500">{entry.actorId}</span>
+}
+
+function TargetCell({ entry }: { entry: AuditLogEntry }) {
+  if (entry.targetId == null) return <span className="text-gray-400">—</span>
+  if (entry.targetName) {
+    return <span className="text-sm text-gray-800 font-medium">{entry.targetName}</span>
+  }
+  return <span className="font-mono text-xs text-gray-500">{entry.targetId}</span>
+}
+
 function Th({ children }: { children: React.ReactNode }) {
   return (
     <th className="whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -222,8 +245,8 @@ function AuditLogContent() {
                 <tr>
                   <Th>ID</Th>
                   <Th>Akcija</Th>
-                  <Th>Akter ID</Th>
-                  <Th>Cilj ID</Th>
+                  <Th>Akter</Th>
+                  <Th>Cilj</Th>
                   <Th>Detalji</Th>
                   <Th>Vreme</Th>
                 </tr>
@@ -233,8 +256,8 @@ function AuditLogContent() {
                   <tr key={e.id} className="hover:bg-gray-50 transition-colors">
                     <Td mono>{e.id}</Td>
                     <Td><ActionBadge action={e.action} /></Td>
-                    <Td mono>{e.actorId ?? '—'}</Td>
-                    <Td mono>{e.targetId ?? '—'}</Td>
+                    <Td><ActorCell entry={e} /></Td>
+                    <Td><TargetCell entry={e} /></Td>
                     <Td><DetailsCell details={e.details} /></Td>
                     <Td mono>
                       {new Date(e.createdAt).toLocaleString('sr-RS', {

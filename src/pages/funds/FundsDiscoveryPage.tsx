@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '@/store/authStore'
 import { useCelina4Store } from '@/store/useCelina4Store'
@@ -22,17 +22,18 @@ export default function FundsDiscoveryPage() {
 
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const isSupervisor = (user?.userType === 'EMPLOYEE' || user?.userType === 'ADMIN') && hasPermission('SUPERVISOR')
 
   useEffect(() => { fetchFunds() }, [fetchFunds])
 
-  function handleSearch() {
-    fetchFunds({ name: search.trim() || undefined, sortBy: sortBy || undefined })
-  }
-
-  function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') handleSearch()
+  function handleSearchInput(value: string) {
+    setSearch(value)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      fetchFunds({ name: value.trim() || undefined, sortBy: sortBy || undefined })
+    }, 400)
   }
 
   return (
@@ -84,14 +85,13 @@ export default function FundsDiscoveryPage() {
                 type="text"
                 placeholder="Pretraži po nazivu…"
                 value={search}
-                onChange={e => setSearch(e.target.value)}
-                onKeyDown={handleKeyDown}
+                onChange={e => handleSearchInput(e.target.value)}
                 className="w-full rounded-xl border border-white/20 bg-white/10 py-3 pl-10 pr-4 text-sm text-white placeholder-blue-200 backdrop-blur-sm focus:border-white/40 focus:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white/20"
               />
             </div>
             <select
               value={sortBy}
-              onChange={e => setSortBy(e.target.value)}
+              onChange={e => { setSortBy(e.target.value); fetchFunds({ name: search.trim() || undefined, sortBy: e.target.value || undefined }) }}
               className="rounded-xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-white backdrop-blur-sm focus:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/20"
               style={{ colorScheme: 'dark' }}
             >
@@ -100,7 +100,7 @@ export default function FundsDiscoveryPage() {
               ))}
             </select>
             <button
-              onClick={handleSearch}
+              onClick={() => fetchFunds({ name: search.trim() || undefined, sortBy: sortBy || undefined })}
               className="rounded-xl bg-white/15 px-5 py-3 text-sm font-semibold text-white ring-1 ring-white/20 transition-colors hover:bg-white/25"
             >
               Pretraži

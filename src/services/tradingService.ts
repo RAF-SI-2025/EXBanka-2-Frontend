@@ -20,6 +20,7 @@ interface BackendTradingOrder {
   accountId: string | number
   listingId: string | number
   ticker?: string
+  name?: string
   listingType?: string
   orderType: string
   direction: string
@@ -53,6 +54,7 @@ function mapOrder(o: BackendTradingOrder): TradingOrder {
     accountId:         String(o.accountId),
     listingId:         String(o.listingId),
     ticker:            o.ticker,
+    name:              o.name,
     listingType:       o.listingType as TradingOrder['listingType'],
     orderType:         o.orderType as TradingOrder['orderType'],
     direction:         o.direction as TradingOrder['direction'],

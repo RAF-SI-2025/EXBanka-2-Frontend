@@ -172,14 +172,11 @@ export default function FundDetailView({ fund, userRole, investAccounts = [], re
       )}
 
       {/* ── Performance chart ────────────────────────────────── */}
-      <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
-        <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-gray-400">Performanse</h2>
-        <FundPerformanceChart
-          fundId={fund.id}
-          performanceData={performanceData}
-          isLoading={performanceLoading}
-        />
-      </div>
+      <FundPerformanceChart
+        fundId={fund.id}
+        performanceData={performanceData}
+        isLoading={performanceLoading}
+      />
 
       {/* ── Securities list ──────────────────────────────────── */}
       <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">

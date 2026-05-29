@@ -13,6 +13,8 @@ import {
 } from '@/services/recurringOrderService'
 import type { AccountListItem, Listing, RecurringOrder, RecurringCadence, RecurringMode, TradingDirection } from '@/types'
 import LoadingSpinner from '@/components/common/LoadingSpinner'
+import Dialog from '@/components/common/Dialog'
+import Button from '@/components/common/Button'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -294,6 +296,8 @@ export default function RecurringOrdersPage() {
   const [orders, setOrders] = useState<RecurringOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<RecurringOrder | null>(null)
+  const [deleteLoading, setDeleteLoading] = useState(false)
 
   useEffect(() => {
     setLoading(true)
@@ -315,14 +319,18 @@ export default function RecurringOrdersPage() {
     }
   }
 
-  async function handleDelete(order: RecurringOrder) {
-    if (!confirm(`Otkazati trajni nalog za ${order.ticker}?`)) return
+  async function handleDeleteConfirm() {
+    if (!deleteTarget) return
+    setDeleteLoading(true)
     try {
-      await deleteRecurringOrder(order.id)
-      setOrders((prev) => prev.filter((o) => o.id !== order.id))
+      await deleteRecurringOrder(deleteTarget.id)
+      setOrders((prev) => prev.filter((o) => o.id !== deleteTarget.id))
       toast.success('Nalog otkazan')
+      setDeleteTarget(null)
     } catch {
       toast.error('Greška pri otkazivanju')
+    } finally {
+      setDeleteLoading(false)
     }
   }
 
@@ -390,7 +398,7 @@ export default function RecurringOrdersPage() {
                           {o.active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
                         </button>
                         <button
-                          onClick={() => handleDelete(o)}
+                          onClick={() => setDeleteTarget(o)}
                           title="Otkaži trajni nalog"
                           className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                         >
@@ -416,6 +424,55 @@ export default function RecurringOrdersPage() {
           }}
         />
       )}
+
+      <Dialog
+        open={!!deleteTarget}
+        onClose={() => !deleteLoading && setDeleteTarget(null)}
+        title="Otkazivanje trajnog naloga"
+        maxWidth="sm"
+      >
+        {deleteTarget && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              Da li ste sigurni da želite da otkažete ovaj trajni nalog? Ova akcija se ne može poništiti.
+            </p>
+
+            <div className="rounded-lg bg-gray-50 border border-gray-100 p-3 text-sm space-y-1.5">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Hartija</span>
+                <span className="font-medium">{deleteTarget.ticker || `#${deleteTarget.listingId}`}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-gray-500">Smer</span>
+                <DirectionBadge d={deleteTarget.direction} />
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Mod</span>
+                <span className="text-gray-700">{MODE_LABELS[deleteTarget.mode]}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Vrednost</span>
+                <span className="font-mono text-gray-800">
+                  {deleteTarget.mode === 'BYAMOUNT' ? `${deleteTarget.value.toFixed(2)} RSD` : `${deleteTarget.value} kom`}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">Interval</span>
+                <span className="text-gray-700">{CADENCE_LABELS[deleteTarget.cadence]}</span>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 pt-1">
+              <Button variant="secondary" size="sm" onClick={() => setDeleteTarget(null)} disabled={deleteLoading}>
+                Odustani
+              </Button>
+              <Button variant="danger" size="sm" loading={deleteLoading} onClick={handleDeleteConfirm}>
+                Otkaži nalog
+              </Button>
+            </div>
+          </div>
+        )}
+      </Dialog>
     </div>
   )
 }

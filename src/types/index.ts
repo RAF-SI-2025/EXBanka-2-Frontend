@@ -465,6 +465,7 @@ export interface TradingOrder {
   accountId: string
   listingId: string
   ticker?: string
+  name?: string
   listingType?: ListingType
   orderType: TradingOrderType
   direction: TradingDirection
@@ -635,7 +636,10 @@ export interface AuditLogEntry {
   id: number
   action: AuditAction | string
   actorId: number | null
+  actorName?: string
+  actorEmail?: string
   targetId: number | null
+  targetName?: string
   details: Record<string, unknown>
   createdAt: string
 }

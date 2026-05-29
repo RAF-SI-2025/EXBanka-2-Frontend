@@ -64,6 +64,7 @@ import ListingDetailsPage from '@/pages/client/listings/ListingDetailsPage'
 import CreateOrderPage from '@/pages/client/listings/CreateOrderPage'
 import MyTradingOrdersPage from '@/pages/client/listings/MyTradingOrdersPage'
 import WatchlistPage from '@/pages/client/watchlist/WatchlistPage'
+import PriceAlertsPage from '@/pages/client/PriceAlertsPage'
 
 import NotFoundPage from '@/pages/NotFoundPage'
 
@@ -171,6 +172,13 @@ const router = createBrowserRouter(
           <Route path="/watchlist" element={
             <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
               <WatchlistPage />
+            </AllowedRolesRoute>
+          } />
+
+          {/* Price Alarmi – klijenti i aktuari */}
+          <Route path="/price-alerts" element={
+            <AllowedRolesRoute allowedRoles={['CLIENT', 'AGENT', 'SUPERVISOR']}>
+              <PriceAlertsPage />
             </AllowedRolesRoute>
           } />
 

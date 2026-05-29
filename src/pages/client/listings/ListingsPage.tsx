@@ -123,14 +123,14 @@ export default function ListingsPage() {
         l.ticker,
         l.name,
         l.listingType,
-        String(l.price),
-        l.price.toFixed(4),
-        String(l.changePercent),
-        l.changePercent.toFixed(2),
-        l.volume,
-        String(parseInt(l.volume, 10)),
-        String(l.initialMarginCost),
-        l.initialMarginCost.toFixed(2),
+        String(l.price ?? 0),
+        (l.price ?? 0).toFixed(4),
+        String(l.changePercent ?? 0),
+        (l.changePercent ?? 0).toFixed(2),
+        l.volume ?? '0',
+        String(parseInt(l.volume ?? '0', 10)),
+        String(l.initialMarginCost ?? 0),
+        (l.initialMarginCost ?? 0).toFixed(2),
       ]
       return fields.some((v) => typeof v === 'string' && v.toLowerCase().includes(q))
     })
@@ -231,7 +231,7 @@ export default function ListingsPage() {
 
         {/* Cena */}
         <td className="px-4 py-3 text-right font-mono text-sm text-gray-900">
-          ${listing.price.toFixed(4)}
+          ${(listing.price ?? 0).toFixed(4)}
         </td>
 
         {/* Promena % */}
@@ -247,18 +247,18 @@ export default function ListingsPage() {
               <TrendingDown className="w-3.5 h-3.5" />
             )}
             {isPositive ? '+' : ''}
-            {listing.changePercent.toFixed(2)}%
+            {(listing.changePercent ?? 0).toFixed(2)}%
           </span>
         </td>
 
         {/* Volumen */}
         <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
-          {parseInt(listing.volume, 10).toLocaleString()}
+          {parseInt(listing.volume ?? '0', 10).toLocaleString()}
         </td>
 
         {/* Initial Margin Cost */}
         <td className="px-4 py-3 text-right text-sm text-gray-600 font-mono">
-          ${listing.initialMarginCost.toFixed(2)}
+          ${(listing.initialMarginCost ?? 0).toFixed(2)}
         </td>
 
         {/* Akcije */}

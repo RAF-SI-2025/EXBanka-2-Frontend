@@ -66,6 +66,9 @@ async function apiRequest<Res>(
     throw err
   }
 
+  if (response.status === 204) {
+    return undefined as Res
+  }
   return response.json() as Promise<Res>
 }
 

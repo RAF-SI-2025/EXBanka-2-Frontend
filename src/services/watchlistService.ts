@@ -1,4 +1,4 @@
-import { apiDelete, apiGet, apiPost } from './grpcClient'
+import { apiDelete, apiGet, apiPatch, apiPost } from './grpcClient'
 import type { Watchlist, WatchlistDetail } from '@/types'
 
 export async function listWatchlists(): Promise<Watchlist[]> {
@@ -8,6 +8,11 @@ export async function listWatchlists(): Promise<Watchlist[]> {
 
 export async function createWatchlist(name: string): Promise<Watchlist> {
   const res = await apiPost<{ name: string }, { watchlist: Watchlist }>('/bank/watchlists', { name })
+  return res.watchlist
+}
+
+export async function renameWatchlist(id: number, name: string): Promise<Watchlist> {
+  const res = await apiPatch<{ name: string }, { watchlist: Watchlist }>(`/bank/watchlists/${id}`, { name })
   return res.watchlist
 }
 
