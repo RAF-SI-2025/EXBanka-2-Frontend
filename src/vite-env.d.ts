@@ -11,3 +11,16 @@ interface ImportMetaEnv {
 interface ImportMeta {
   readonly env: ImportMetaEnv
 }
+
+// Runtime configuration injected by /config.js (see public/config.js + docker-entrypoint.sh).
+// Lets us change API_BASE_URL / protocol without rebuilding the frontend bundle.
+interface AppRuntimeConfig {
+  API_BASE_URL?: string
+  APP_ENV?: string
+  ACCESS_TOKEN_TTL_MS?: number
+  MOCK_MODE?: boolean
+}
+
+interface Window {
+  __APP_CONFIG__?: AppRuntimeConfig
+}

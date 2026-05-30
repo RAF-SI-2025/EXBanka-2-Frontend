@@ -33,6 +33,11 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
+# Runtime config entrypoint: writes /usr/share/nginx/html/config.js from ENV.
+# Allows API_BASE_URL / protocol changes without rebuilding the image.
+COPY docker-entrypoint.sh /docker-entrypoint.d/40-app-config.sh
+RUN chmod +x /docker-entrypoint.d/40-app-config.sh
+
 EXPOSE 80
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \

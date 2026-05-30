@@ -36,8 +36,11 @@ export interface HistoryFilter {
   counterpartId?: number
 }
 
-const RAW_BASE = (import.meta.env as Record<string, string | undefined>).VITE_API_BASE_URL ?? ''
-const API_BASE = RAW_BASE.replace(/\/api\/?$/, '')
+const RUNTIME_BASE =
+  (typeof window !== 'undefined' && window.__APP_CONFIG__?.API_BASE_URL) ||
+  (import.meta.env as Record<string, string | undefined>).VITE_API_BASE_URL ||
+  ''
+const API_BASE = RUNTIME_BASE.replace(/\/api\/?$/, '')
 
 async function apiFetch<T>(path: string): Promise<T> {
   const { accessToken } = useAuthStore.getState()
