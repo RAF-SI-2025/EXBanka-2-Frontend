@@ -15,10 +15,15 @@ import {
   createNegotiation,
   listInterbankContracts,
   exerciseInterbankContract,
+  listIncomingNegotiations,
+  acceptNegotiation,
+  counterNegotiation,
+  cancelNegotiation,
   type PublicStocksDTO,
   type InterbankOptionContract,
   type PublicStock,
   type PublicStockSeller,
+  type IncomingNegotiation,
 } from '@/services/interbankService'
 
 export default function InterbankOTCPage() {
@@ -42,16 +47,29 @@ export default function InterbankOTCPage() {
   const [exercising, setExercising] = useState<string | null>(null)
   const [exerciseMsg, setExerciseMsg] = useState<string | null>(null)
 
+  // Dolazne ponude (mi smo banka prodavca)
+  const [incoming, setIncoming] = useState<IncomingNegotiation[]>([])
+  const [acting, setActing] = useState<string | null>(null)
+  const [incomingMsg, setIncomingMsg] = useState<string | null>(null)
+  const [counterFor, setCounterFor] = useState<IncomingNegotiation | null>(null)
+  const [cAmount, setCAmount] = useState('')
+  const [cPrice, setCPrice] = useState('')
+  const [cPremium, setCPremium] = useState('')
+  const [cCurrency, setCCurrency] = useState('USD')
+  const [cSettlement, setCSettlement] = useState('')
+
   async function refresh() {
     setLoading(true)
     setError(null)
     try {
-      const [ps, cts] = await Promise.all([
+      const [ps, cts, inc] = await Promise.all([
         getPublicStocks(),
         listInterbankContracts(),
+        listIncomingNegotiations(),
       ])
       setPublicStocks(ps)
       setContracts(cts ?? [])
+      setIncoming(inc ?? [])
     } catch (e) {
       setError(String((e as { message?: string })?.message ?? e))
     } finally {
@@ -113,6 +131,81 @@ export default function InterbankOTCPage() {
     } finally {
       setExercising(null)
     }
+  }
+
+  function negKey(n: IncomingNegotiation) {
+    return `${n.negotiationId.routingNumber}/${n.negotiationId.id}`
+  }
+
+  async function runIncomingAction(n: IncomingNegotiation, fn: () => Promise<void>, ok: string) {
+    setActing(negKey(n))
+    setIncomingMsg(null)
+    try {
+      await fn()
+      setIncomingMsg(ok)
+      await refresh()
+    } catch (e) {
+      setIncomingMsg(`Greška: ${String((e as { message?: string })?.message ?? e)}`)
+    } finally {
+      setActing(null)
+    }
+  }
+
+  function handleAccept(n: IncomingNegotiation) {
+    void runIncomingAction(
+      n,
+      () => acceptNegotiation(n.negotiationId.routingNumber, n.negotiationId.id),
+      'Ponuda prihvaćena — kreiran je opcioni ugovor.',
+    )
+  }
+
+  function handleReject(n: IncomingNegotiation) {
+    void runIncomingAction(
+      n,
+      () => cancelNegotiation(n.negotiationId.routingNumber, n.negotiationId.id),
+      'Ponuda odbijena.',
+    )
+  }
+
+  function openCounter(n: IncomingNegotiation) {
+    setCounterFor(n)
+    setCAmount(String(n.amount))
+    setCPrice(String(n.pricePerUnit.amount))
+    setCPremium(String(n.premium.amount))
+    setCCurrency(n.pricePerUnit.currency || 'USD')
+    setCSettlement(n.settlementDate ? n.settlementDate.slice(0, 10) : '')
+    setIncomingMsg(null)
+  }
+
+  async function submitCounter() {
+    if (!counterFor) return
+    const n = counterFor
+    const amt = parseInt(cAmount, 10)
+    const price = parseFloat(cPrice)
+    const premium = parseFloat(cPremium)
+    if (!amt || amt <= 0 || !price || price <= 0 || Number.isNaN(premium) || premium < 0 || !cSettlement) {
+      setIncomingMsg('Neispravne vrednosti kontraponude.')
+      return
+    }
+    await runIncomingAction(
+      n,
+      () =>
+        counterNegotiation(n.negotiationId.routingNumber, n.negotiationId.id, {
+          ticker: n.ticker,
+          settlementDate: new Date(cSettlement).toISOString(),
+          priceCurrency: cCurrency,
+          priceAmount: price,
+          premiumCurrency: cCurrency,
+          premiumAmount: premium,
+          buyerRoutingNumber: n.buyer.routingNumber,
+          buyerId: n.buyer.id,
+          sellerRoutingNumber: n.seller.routingNumber,
+          sellerId: n.seller.id,
+          amount: amt,
+        }),
+      'Kontraponuda poslata.',
+    )
+    setCounterFor(null)
   }
 
   return (
@@ -231,6 +324,115 @@ export default function InterbankOTCPage() {
           {offerSuccess}
         </div>
       )}
+
+      {/* ── Dolazne ponude (mi smo banka prodavca) ── */}
+      <section data-testid="incoming-negotiations" className="bg-white p-6 rounded-lg shadow">
+        <h2 className="text-lg font-semibold mb-1">Dolazne ponude</h2>
+        <p className="text-xs text-gray-400 mb-4">
+          Prihvatanje kreira opcioni ugovor. Naplata premije je zaseban korak.
+        </p>
+        {loading && <Loader2 className="animate-spin text-blue-600" />}
+        {!loading && incoming.length === 0 && (
+          <p className="text-sm text-gray-500">Nema dolaznih ponuda.</p>
+        )}
+        {!loading && incoming.length > 0 && (
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-gray-500 border-b">
+                <th className="py-2">Ticker</th>
+                <th>Količina</th>
+                <th>Cena/jed.</th>
+                <th>Premium</th>
+                <th>Kupac</th>
+                <th>Status</th>
+                <th>Na potezu</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {incoming.map((n) => {
+                const key = negKey(n)
+                const busy = acting === key
+                const canAct = n.isOngoing && n.myTurn
+                return (
+                  <tr key={key} className="border-b">
+                    <td className="py-2 font-medium">{n.ticker}</td>
+                    <td>{n.amount}</td>
+                    <td>{n.pricePerUnit.amount} {n.pricePerUnit.currency}</td>
+                    <td>{n.premium.amount} {n.premium.currency}</td>
+                    <td>{n.buyer.routingNumber}/{n.buyer.id}</td>
+                    <td>{n.status}</td>
+                    <td>{n.isOngoing ? (n.myTurn ? 'Vi' : 'Druga banka') : '—'}</td>
+                    <td className="space-x-2 whitespace-nowrap">
+                      <button
+                        data-testid={`accept-${n.negotiationId.id}`}
+                        onClick={() => handleAccept(n)}
+                        disabled={!canAct || busy}
+                        className="text-green-700 hover:underline disabled:opacity-40"
+                      >
+                        Prihvati
+                      </button>
+                      <button
+                        onClick={() => openCounter(n)}
+                        disabled={!canAct || busy}
+                        className="text-blue-600 hover:underline disabled:opacity-40"
+                      >
+                        Kontra
+                      </button>
+                      <button
+                        onClick={() => handleReject(n)}
+                        disabled={!n.isOngoing || busy}
+                        className="text-red-600 hover:underline disabled:opacity-40"
+                      >
+                        Odbij
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        )}
+
+        {counterFor && (
+          <div className="mt-4 bg-blue-50 border border-blue-200 p-4 rounded">
+            <h3 className="text-sm font-semibold mb-3">
+              Kontraponuda za {counterFor.ticker} ({negKey(counterFor)})
+            </h3>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Količina">
+                <input type="number" min="1" value={cAmount} onChange={(e) => setCAmount(e.target.value)} className="w-full border rounded px-3 py-2" />
+              </Field>
+              <Field label="Cena po jedinici">
+                <input type="number" step="0.01" value={cPrice} onChange={(e) => setCPrice(e.target.value)} className="w-full border rounded px-3 py-2" />
+              </Field>
+              <Field label="Premium">
+                <input type="number" step="0.01" value={cPremium} onChange={(e) => setCPremium(e.target.value)} className="w-full border rounded px-3 py-2" />
+              </Field>
+              <Field label="Valuta">
+                <select value={cCurrency} onChange={(e) => setCCurrency(e.target.value)} className="w-full border rounded px-3 py-2">
+                  {['USD', 'EUR', 'RSD', 'CHF', 'JPY', 'AUD', 'CAD', 'GBP'].map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </Field>
+              <Field label="Settlement datum">
+                <input type="date" value={cSettlement} onChange={(e) => setCSettlement(e.target.value)} className="w-full border rounded px-3 py-2" />
+              </Field>
+            </div>
+            <div className="flex gap-2 mt-4">
+              <button onClick={submitCounter} disabled={acting !== null} className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white px-4 py-2 rounded text-sm">
+                Pošalji kontraponudu
+              </button>
+              <button onClick={() => setCounterFor(null)} className="border px-4 py-2 rounded text-sm">
+                Otkaži
+              </button>
+            </div>
+          </div>
+        )}
+
+        {incomingMsg && <p className="mt-3 text-sm text-gray-700">{incomingMsg}</p>}
+      </section>
 
       {/* ── My contracts ── */}
       <section data-testid="my-contracts" className="bg-white p-6 rounded-lg shadow">

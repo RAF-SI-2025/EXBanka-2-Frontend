@@ -57,6 +57,22 @@ export interface OtcNegotiation extends OtcOffer {
   isOngoing: boolean
 }
 
+// Dolazna ponuda koju mi hostujemo (mi smo banka prodavca). Vraća GET /negotiations.
+export interface IncomingNegotiation {
+  negotiationId: ForeignBankId
+  ticker: string
+  amount: number
+  pricePerUnit: MonetaryValue
+  premium: MonetaryValue
+  settlementDate: string
+  buyer: ForeignBankId
+  seller: ForeignBankId
+  status: string
+  isOngoing: boolean
+  lastModifiedBy: ForeignBankId
+  myTurn: boolean
+}
+
 export interface InterbankPaymentResult {
   interbankTxId: number
   transactionRoutingNumber: number
@@ -136,6 +152,12 @@ export async function createNegotiation(params: CreateNegotiationParams): Promis
     '/bank/interbank/negotiations',
     params
   )
+}
+
+// listIncomingNegotiations — dolazne OTC ponude koje mi hostujemo (mi = prodavac).
+// CLIENT dobija samo svoje; AGENT/SUPERVISOR sve (filter je na backendu po JWT-u).
+export async function listIncomingNegotiations(): Promise<IncomingNegotiation[]> {
+  return apiGet<IncomingNegotiation[]>('/bank/interbank/negotiations')
 }
 
 export async function getNegotiation(routing: number, id: string): Promise<OtcNegotiation> {
